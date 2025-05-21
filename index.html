@@ -1,25 +1,242 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>DHK ALIGN — Portfolio</title>
-  <link rel="canonical" href="https://dhkalign.com">
-  <link rel="icon" href="favicon.ico">
-  <style>
-    html,body{margin:0;padding:0;background:#0d0d0d;color:#f2f2f2;
-      font-family:Inter,Arial,Helvetica,sans-serif;display:flex;
-      align-items:center;justify-content:center;height:100vh}
-    h1{font-size:3rem;letter-spacing:.05em;margin:0}
-    p{font-size:1rem;opacity:.8;margin:.5rem 0 0}
-    a{color:#e94d1a;text-decoration:none}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ahmad Sartaj | Remote Ops & Digital Systems Strategist</title>
+    <meta name="description" content="Portfolio of Ahmad Sartaj: Remote Operations & Digital Systems Strategist. Grit forged in warehouses, sharpened by code.">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #101112;
+            --fg: #f4f4f4;
+            --accent: #27d27b;
+            --card: #18191b;
+            --border: #252629;
+            --link: #2cdb8c;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Roboto', Arial, sans-serif;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2.5rem 1.25rem 4rem 1.25rem;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        .name {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+        .tagline {
+            font-size: 1.2rem;
+            color: var(--accent);
+            margin-top: 0.5rem;
+        }
+        nav {
+            margin: 2rem 0;
+            display: flex;
+            justify-content: center;
+            gap: 2.5rem;
+        }
+        nav a {
+            color: var(--link);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: 0.06em;
+            transition: color 0.15s;
+        }
+        nav a:hover {
+            color: var(--accent);
+        }
+        .section {
+            margin-bottom: 2.5rem;
+            background: var(--card);
+            border-radius: 14px;
+            box-shadow: 0 2px 18px 2px rgba(0,0,0,0.15);
+            border: 1px solid var(--border);
+            padding: 2rem 2rem 1.25rem 2rem;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: var(--accent);
+            letter-spacing: 0.05em;
+        }
+        ul.skills-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1rem 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+        }
+        ul.skills-list li {
+            background: #222325;
+            padding: 0.65rem 1rem;
+            border-radius: 10px;
+            color: var(--fg);
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        .projects {
+            display: grid;
+            gap: 1.5rem;
+        }
+        .project-card {
+            background: #1c1d1f;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            border: 1px solid var(--border);
+        }
+        .project-title {
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 1.15rem;
+        }
+        .resume-link {
+            display: inline-block;
+            background: var(--accent);
+            color: #101112;
+            font-weight: 700;
+            border-radius: 8px;
+            padding: 0.7rem 1.6rem;
+            text-decoration: none;
+            margin-top: 1rem;
+            font-size: 1.07rem;
+            transition: background 0.17s;
+        }
+        .resume-link:hover {
+            background: #20b366;
+        }
+        .contact {
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.7rem;
+        }
+        .contact a {
+            color: var(--link);
+            text-decoration: none;
+            font-size: 1.08rem;
+            transition: color 0.15s;
+        }
+        .contact a:hover {
+            color: var(--accent);
+        }
+        .footer {
+            text-align: center;
+            font-size: 0.95rem;
+            color: #777;
+            margin-top: 3rem;
+            padding-bottom: 1rem;
+        }
+        .credit {
+            color: #444;
+            margin-top: 1rem;
+            font-size: 0.97rem;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 1.3rem 0.2rem 3rem 0.2rem;
+            }
+            .section {
+                padding: 1.1rem 0.6rem 1rem 0.6rem;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div>
-    <h1>DHK&nbsp;ALIGN</h1>
-    <p>Bangladeshi‑built. Globally aligned.</p>
-    <p><a href="mailto:sahmad@dhkalign.com">sahmad@dhkalign.com</a></p>
-  </div>
+    <div class="container">
+        <header>
+            <div class="name">Ahmad Sartaj</div>
+            <div class="tagline">Remote Operations & Digital Systems Strategist — Grit forged in warehouses, sharpened by code.</div>
+            <nav>
+                <a href="#about">About</a>
+                <a href="#skills">Skills</a>
+                <a href="#projects">Projects</a>
+                <a href="#resume">Resume</a>
+                <a href="#contact">Contact</a>
+            </nav>
+        </header>
+
+        <section id="about" class="section">
+            <h2>About Me</h2>
+            <p>
+                I’ve walked 10+ miles per shift in Amazon warehouses, optimized ERP workflows, and built my own DNS config before breakfast. I bring systems thinking to physical and digital infrastructure—ready to solve problems that actually matter.<br><br>
+                Seeking a remote-first team where grit, initiative, and results matter more than titles.<br><br>
+                <b>Note:</b> This site was designed, iterated, and shipped with ChatGPT (WRAITH) as my digital partner—proof I use AI to work faster and smarter.
+            </p>
+        </section>
+
+        <section id="skills" class="section">
+            <h2>Skills</h2>
+            <ul class="skills-list">
+                <li>ERP (SAP S/4HANA)</li>
+                <li>Linux Mint / XFCE</li>
+                <li>DNS / Domain Config</li>
+                <li>SQL / SPSS</li>
+                <li>Inventory Ops</li>
+                <li>Remote Systems Management</li>
+                <li>Conflict De-escalation</li>
+                <li>Git / Version Control</li>
+                <li>Time Management</li>
+                <li>Critical Thinking</li>
+                <li>Attention to Detail</li>
+                <li>Customer Service</li>
+                <li>WMS / Warehouse Ops</li>
+            </ul>
+        </section>
+
+        <section id="projects" class="section">
+            <h2>Projects</h2>
+            <div class="projects">
+                <div class="project-card">
+                    <div class="project-title">Linux MacBook Resurrection</div>
+                    <div class="project-desc">
+                        Converted an old MacBook Air (2018) into a fast, functional Linux Mint XFCE machine. Documented the entire process to help others do the same with legacy Apple hardware.
+                    </div>
+                </div>
+                <div class="project-card">
+                    <div class="project-title">Domain Deployment & Server Config</div>
+                    <div class="project-desc">
+                        Bought, set up, and connected <b>dhkmtro.com</b> (and dhkalign.com) to remote systems. Managed DNS, hosting, and ran automation test builds for secure deployment.
+                    </div>
+                </div>
+                <div class="project-card">
+                    <div class="project-title">WRAITH OPS Toolkit</div>
+                    <div class="project-desc">
+                        Security-focused, minimal toolkit for digital sovereignty: custom Linux, Notion, and workflow templates.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="resume" class="section" style="text-align:center;">
+            <h2>Resume</h2>
+            <a href="/RabbitResumeFinal.pdf" target="_blank" class="resume-link">Download Resume (PDF)</a>
+        </section>
+
+        <section id="contact" class="section contact">
+            <h2>Contact</h2>
+            <a href="mailto:ahmad.i.sartaj@gmail.com">ahmad.i.sartaj@gmail.com</a>
+            <a href="https://www.linkedin.com/in/sartajiahmad" target="_blank">LinkedIn: sartajiahmad</a>
+        </section>
+
+        <div class="footer">
+            &copy; 2025 Ahmad Sartaj | Built with WRAITH<br>
+            <span class="credit">Site and workflow co-designed by ChatGPT (WRAITH) & Taj | AI x Human: Future-Proof</span>
+        </div>
+    </div>
 </body>
 </html>
