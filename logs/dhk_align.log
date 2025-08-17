@@ -1,0 +1,670 @@
+2025-08-06 03:11:01,335 | dhk_align | DEBUG | Slang normalization map built
+2025-08-06 03:11:01,335 | dhk_align | DEBUG | Pattern matchers built
+2025-08-06 03:11:01,336 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-06 03:11:01,336 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-06 03:11:01,336 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-06 03:11:01,339 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-06 03:11:01,343 | dhk_align | INFO | Performance metric: database_connection
+2025-08-06 03:11:01,344 | dhk_align | INFO | Database operation: schema_init
+2025-08-06 03:11:01,344 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-06 03:11:01,344 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-06 03:11:01,344 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-06 03:11:01,344 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-06 03:11:01,345 | dhk_align | INFO | Performance metric: database_connection
+2025-08-06 03:11:01,345 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-06 03:11:01,345 | dhk_align | INFO | Performance metric: application_startup
+2025-08-06 03:11:01,345 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-06 03:11:01,345 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-06 03:11:03,671 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-06 03:11:04,359 | dhk_align | DEBUG | Slang normalization map built
+2025-08-06 03:11:04,360 | dhk_align | DEBUG | Pattern matchers built
+2025-08-06 03:11:04,360 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-06 03:11:04,360 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-06 03:11:04,360 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-06 03:11:04,363 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-06 03:11:04,364 | dhk_align | INFO | Performance metric: database_connection
+2025-08-06 03:11:04,364 | dhk_align | INFO | Database operation: schema_init
+2025-08-06 03:11:04,364 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-06 03:11:04,364 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-06 03:11:04,364 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-06 03:11:04,364 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-06 03:11:04,364 | dhk_align | INFO | Performance metric: database_connection
+2025-08-06 03:11:04,365 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-06 03:11:04,365 | dhk_align | INFO | Performance metric: application_startup
+2025-08-06 03:11:04,365 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-06 03:11:04,365 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-06 03:13:20,148 | dhk_align | DEBUG | Slang normalization map built
+2025-08-06 03:13:20,149 | dhk_align | DEBUG | Pattern matchers built
+2025-08-06 03:13:20,149 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-06 03:13:20,149 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-06 03:13:20,149 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-06 03:13:20,152 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-06 03:13:20,153 | dhk_align | INFO | Performance metric: database_connection
+2025-08-06 03:13:20,153 | dhk_align | INFO | Database operation: schema_init
+2025-08-06 03:13:20,153 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-06 03:13:20,153 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-06 03:13:20,153 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-06 03:13:20,153 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-06 03:13:20,154 | dhk_align | INFO | Performance metric: database_connection
+2025-08-06 03:13:20,154 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-06 03:13:20,154 | dhk_align | INFO | Performance metric: application_startup
+2025-08-06 03:13:20,154 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-06 03:13:20,154 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-06 03:15:54,925 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-07 03:21:59,468 | dhk_align | DEBUG | Slang normalization map built
+2025-08-07 03:21:59,469 | dhk_align | DEBUG | Pattern matchers built
+2025-08-07 03:21:59,469 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-07 03:21:59,469 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-07 03:21:59,469 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-07 03:21:59,470 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-07 03:21:59,471 | dhk_align | INFO | Performance metric: database_connection
+2025-08-07 03:21:59,471 | dhk_align | INFO | Database operation: schema_init
+2025-08-07 03:21:59,471 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-07 03:21:59,471 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-07 03:21:59,472 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-07 03:21:59,472 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-07 03:21:59,472 | dhk_align | INFO | Performance metric: database_connection
+2025-08-07 03:21:59,472 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-07 03:21:59,472 | dhk_align | INFO | Performance metric: application_startup
+2025-08-07 03:21:59,472 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-07 03:21:59,472 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:52:34,367 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:52:34,369 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:52:34,369 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:52:34,369 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:52:34,369 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:52:34,372 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:52:34,375 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:52:34,375 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:52:34,375 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:52:34,375 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:52:34,375 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:52:34,375 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:52:34,376 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:52:34,376 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:52:34,376 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:52:34,376 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:52:34,376 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:52:35,184 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:52:35,792 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:52:35,793 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:52:35,793 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:52:35,793 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:52:35,793 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:52:35,797 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:52:35,798 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:52:35,798 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:52:35,798 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:52:35,798 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:52:35,798 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:52:35,798 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:52:35,799 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:52:35,799 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:52:35,799 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:52:35,799 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:52:35,799 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:52:40,955 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:52:41,562 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:52:41,562 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:52:41,563 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:52:41,563 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:52:41,563 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:52:41,566 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:52:41,568 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:52:41,568 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:52:41,568 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:52:41,568 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:52:41,568 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:52:41,568 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:52:41,568 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:52:41,569 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:52:41,569 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:52:41,569 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:52:41,569 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:52:47,186 | dhk_align | INFO | API request: health_check
+2025-08-15 21:52:47,187 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:52:47,187 | dhk_align | INFO | Health check: healthy
+2025-08-15 21:52:47,187 | dhk_align | INFO | Performance metric: api_health_check
+2025-08-15 21:52:47,830 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:52:48,959 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:52:48,959 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:52:48,960 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:52:48,960 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:52:48,960 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:52:48,963 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:52:48,965 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:52:48,965 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:52:48,965 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:52:48,965 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:52:48,965 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:52:48,965 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:52:48,965 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:52:48,966 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:52:48,966 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:52:48,966 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:52:48,966 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:52:53,616 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:52:54,235 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:52:54,235 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:52:54,236 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:52:54,236 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:52:54,236 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:52:54,239 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:52:54,241 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:52:54,241 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:52:54,241 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:52:54,241 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:52:54,241 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:52:54,241 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:52:54,242 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:52:54,242 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:52:54,242 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:52:54,242 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:52:54,242 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:00,003 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:53:00,600 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:53:00,601 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:53:00,601 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:53:00,601 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:53:00,601 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:53:00,604 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:53:00,606 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:00,606 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:53:00,606 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:53:00,606 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:53:00,606 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:53:00,606 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:53:00,606 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:00,607 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:53:00,607 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:53:00,607 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:53:00,607 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:05,657 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:53:06,271 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:53:06,272 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:53:06,272 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:53:06,272 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:53:06,272 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:53:06,276 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:53:06,277 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:06,277 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:53:06,277 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:53:06,277 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:53:06,278 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:53:06,278 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:53:06,278 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:06,278 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:53:06,278 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:53:06,278 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:53:06,278 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:06,878 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:53:06,879 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:53:06,880 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:53:06,880 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:53:06,880 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:53:06,883 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:53:06,884 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:06,885 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:53:06,885 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:53:06,885 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:53:06,885 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:53:06,885 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:53:06,885 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:06,886 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:53:06,886 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:53:06,886 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:53:06,886 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:11,734 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:53:12,398 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:53:12,399 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:53:12,399 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:53:12,399 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:53:12,399 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:53:12,402 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:53:12,404 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:12,405 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:53:12,405 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:53:12,405 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:53:12,405 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:53:12,405 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:53:12,405 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:12,405 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:53:12,405 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:53:12,406 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:53:12,406 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:17,555 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:53:18,167 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:53:18,168 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:53:18,169 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:53:18,169 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:53:18,169 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:53:18,172 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:53:18,173 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:18,173 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:53:18,173 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:53:18,173 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:53:18,173 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:53:18,173 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:53:18,174 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:18,174 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:53:18,174 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:53:18,174 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:53:18,174 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:23,329 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:53:24,334 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:53:24,334 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:53:24,335 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:53:24,335 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:53:24,335 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:53:24,338 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:53:24,340 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:24,341 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:53:24,341 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:53:24,341 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:53:24,341 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:53:24,341 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:53:24,341 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:24,342 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:53:24,342 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:53:24,342 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:53:24,342 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:29,802 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:53:30,424 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:53:30,425 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:53:30,425 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:53:30,425 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:53:30,425 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:53:30,428 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:53:30,430 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:30,430 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:53:30,430 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:53:30,430 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:53:30,430 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:53:30,430 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:53:30,430 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:30,431 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:53:30,431 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:53:30,431 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:53:30,431 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:35,786 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:53:36,393 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:53:36,394 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:53:36,395 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:53:36,395 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:53:36,395 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:53:36,398 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:53:36,400 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:36,400 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:53:36,400 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:53:36,400 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:53:36,400 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:53:36,400 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:53:36,400 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:36,401 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:53:36,401 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:53:36,401 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:53:36,401 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:42,161 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:53:42,779 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:53:42,780 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:53:42,780 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:53:42,780 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:53:42,780 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:53:42,783 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:53:42,785 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:42,785 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:53:42,785 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:53:42,786 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:53:42,786 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:53:42,786 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:53:42,786 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:42,786 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:53:42,786 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:53:42,786 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:53:42,786 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:47,535 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:53:48,156 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:53:48,157 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:53:48,157 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:53:48,157 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:53:48,157 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:53:48,160 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:53:48,162 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:48,162 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:53:48,162 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:53:48,162 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:53:48,162 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:53:48,162 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:53:48,163 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:48,163 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:53:48,163 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:53:48,163 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:53:48,163 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:53,619 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:53:54,257 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:53:54,258 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:53:54,258 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:53:54,258 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:53:54,258 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:53:54,261 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:53:54,263 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:54,263 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:53:54,263 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:53:54,263 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:53:54,263 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:53:54,263 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:53:54,263 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:53:54,264 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:53:54,264 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:53:54,264 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:53:54,264 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:53:59,617 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:54:00,234 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:54:00,235 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:54:00,235 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:54:00,235 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:54:00,235 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:54:00,238 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:54:00,240 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:00,241 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:54:00,241 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:54:00,241 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:54:00,241 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:54:00,241 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:54:00,241 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:00,242 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:54:00,242 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:54:00,242 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:54:00,242 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:54:06,704 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:54:07,322 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:54:07,323 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:54:07,323 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:54:07,324 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:54:07,324 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:54:07,327 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:54:07,329 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:07,329 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:54:07,329 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:54:07,329 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:54:07,329 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:54:07,330 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:54:07,330 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:07,330 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:54:07,330 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:54:07,330 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:54:07,330 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:54:12,885 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:54:13,494 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:54:13,495 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:54:13,495 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:54:13,496 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:54:13,496 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:54:13,499 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:54:13,501 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:13,501 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:54:13,501 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:54:13,501 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:54:13,501 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:54:13,501 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:54:13,501 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:13,502 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:54:13,502 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:54:13,502 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:54:13,502 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:54:19,163 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:54:19,773 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:54:19,774 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:54:19,774 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:54:19,775 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:54:19,775 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:54:19,778 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:54:19,780 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:19,780 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:54:19,780 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:54:19,780 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:54:19,780 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:54:19,780 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:54:19,780 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:19,781 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:54:19,781 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:54:19,781 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:54:19,781 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:54:25,640 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:54:26,249 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:54:26,250 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:54:26,250 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:54:26,250 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:54:26,250 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:54:26,253 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:54:26,256 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:26,256 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:54:26,256 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:54:26,256 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:54:26,256 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:54:26,256 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:54:26,256 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:26,257 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:54:26,257 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:54:26,257 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:54:26,257 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:54:30,910 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:54:31,519 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:54:31,520 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:54:31,520 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:54:31,520 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:54:31,521 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:54:31,524 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:54:31,526 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:31,526 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:54:31,526 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:54:31,526 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:54:31,526 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:54:31,526 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:54:31,526 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:31,527 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:54:31,527 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:54:31,527 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:54:31,527 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:54:43,044 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:54:43,650 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:54:43,651 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:54:43,651 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:54:43,651 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:54:43,651 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:54:43,654 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:54:43,657 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:43,657 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:54:43,657 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:54:43,657 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:54:43,657 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:54:43,657 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:54:43,658 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:43,658 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:54:43,658 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:54:43,658 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:54:43,658 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:54:49,521 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:54:50,132 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:54:50,133 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:54:50,133 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:54:50,133 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:54:50,133 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:54:50,137 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:54:50,139 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:50,139 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:54:50,139 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:54:50,139 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:54:50,139 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:54:50,139 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:54:50,139 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:50,140 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:54:50,140 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:54:50,140 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:54:50,140 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:54:55,801 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:54:56,421 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:54:56,422 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:54:56,422 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:54:56,422 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:54:56,423 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:54:56,426 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:54:56,427 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:56,427 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:54:56,428 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:54:56,428 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:54:56,428 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:54:56,428 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:54:56,428 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:54:56,429 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:54:56,429 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:54:56,429 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:54:56,429 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:55:02,391 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:55:03,003 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:55:03,004 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:55:03,004 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:55:03,004 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:55:03,004 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:55:03,007 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:55:03,009 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:55:03,009 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:55:03,009 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:55:03,009 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:55:03,009 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:55:03,009 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:55:03,009 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:55:03,010 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:55:03,010 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:55:03,010 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:55:03,010 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 21:55:06,950 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 21:55:07,545 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 21:55:07,546 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 21:55:07,546 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 21:55:07,546 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 21:55:07,546 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 21:55:07,549 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 21:55:07,551 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:55:07,552 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 21:55:07,552 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 21:55:07,552 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 21:55:07,552 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 21:55:07,552 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 21:55:07,552 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 21:55:07,553 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 21:55:07,553 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 21:55:07,553 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 21:55:07,553 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 22:44:33,896 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 22:44:50,825 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 22:44:50,826 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 22:44:50,827 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 22:44:50,827 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 22:44:50,827 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 22:44:50,830 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 22:44:50,831 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 22:44:50,832 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 22:44:50,832 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 22:44:50,832 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 22:44:50,832 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 22:44:50,832 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 22:44:50,832 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 22:44:50,833 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 22:44:50,833 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 22:44:50,833 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 22:44:50,833 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 22:47:09,358 | dhk_align | INFO | API request: health_check
+2025-08-15 22:47:09,360 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 22:47:09,361 | dhk_align | INFO | Health check: healthy
+2025-08-15 22:47:09,361 | dhk_align | INFO | Performance metric: api_health_check
+2025-08-15 22:48:48,333 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 22:48:49,227 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 22:48:49,228 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 22:48:49,228 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 22:48:49,229 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 22:48:49,229 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 22:48:49,232 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 22:48:49,233 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 22:48:49,234 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 22:48:49,234 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 22:48:49,234 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 22:48:49,234 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 22:48:49,234 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 22:48:49,234 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 22:48:49,235 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 22:48:49,235 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 22:48:49,235 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 22:48:49,235 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 22:50:06,422 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 22:50:07,137 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 22:50:07,138 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 22:50:07,138 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 22:50:07,138 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 22:50:07,139 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 22:50:07,142 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 22:50:07,144 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 22:50:07,144 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 22:50:07,144 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 22:50:07,144 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 22:50:07,144 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 22:50:07,144 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 22:50:07,144 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 22:50:07,145 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 22:50:07,145 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 22:50:07,145 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 22:50:07,145 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 22:50:13,006 | dhk_align | INFO | 👋 SHUTDOWN: DHK Align WRAITH shutting down gracefully...
+2025-08-15 22:50:13,624 | dhk_align | DEBUG | Slang normalization map built
+2025-08-15 22:50:13,625 | dhk_align | DEBUG | Pattern matchers built
+2025-08-15 22:50:13,625 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-15 22:50:13,625 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-15 22:50:13,625 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-15 22:50:13,630 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-15 22:50:13,632 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 22:50:13,632 | dhk_align | INFO | Database operation: schema_init
+2025-08-15 22:50:13,632 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-15 22:50:13,632 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-15 22:50:13,632 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-15 22:50:13,632 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-15 22:50:13,632 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 22:50:13,633 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-15 22:50:13,633 | dhk_align | INFO | Performance metric: application_startup
+2025-08-15 22:50:13,633 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-15 22:50:13,633 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-15 22:50:48,612 | dhk_align | INFO | API request: api_translate
+2025-08-15 22:50:48,614 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 22:50:48,614 | dhk_align | INFO | Database operation: translation_lookup
+2025-08-15 22:50:48,614 | dhk_align | INFO | Performance metric: translation_lookup
+2025-08-15 22:50:48,614 | dhk_align | INFO | Performance metric: api_api_translate
+2025-08-15 22:51:08,337 | dhk_align | INFO | API request: api_translate
+2025-08-15 22:51:08,338 | dhk_align | INFO | Performance metric: database_connection
+2025-08-15 22:51:08,338 | dhk_align | INFO | Database operation: translation_lookup
+2025-08-15 22:51:08,339 | dhk_align | INFO | Performance metric: translation_lookup
+2025-08-15 22:51:08,339 | dhk_align | INFO | Performance metric: api_api_translate
+2025-08-17 01:32:19,337 | dhk_align | DEBUG | Slang normalization map built
+2025-08-17 01:32:19,338 | dhk_align | DEBUG | Pattern matchers built
+2025-08-17 01:32:19,338 | dhk_align | DEBUG | Compound splitting rules built
+2025-08-17 01:32:19,338 | dhk_align | INFO | Initialized empty adaptive cache
+2025-08-17 01:32:19,338 | dhk_align | INFO | Enhanced translation engine initialized
+2025-08-17 01:32:19,340 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH Edition initializing...
+2025-08-17 01:32:19,345 | dhk_align | INFO | Performance metric: database_connection
+2025-08-17 01:32:19,346 | dhk_align | INFO | Database operation: schema_init
+2025-08-17 01:32:19,346 | dhk_align | INFO | 🚀 STARTUP: Database schema initialized successfully
+2025-08-17 01:32:19,346 | dhk_align | INFO | Performance metric: database_initialization
+2025-08-17 01:32:19,346 | dhk_align | INFO | 🚀 STARTUP: Enhanced translator engine connected to database
+2025-08-17 01:32:19,346 | dhk_align | INFO | 🚀 STARTUP: Dataset file not found: data/combined_dataset_final_sequential.csv, creating sample data...
+2025-08-17 01:32:19,346 | dhk_align | INFO | Performance metric: database_connection
+2025-08-17 01:32:19,348 | dhk_align | INFO | 🚀 STARTUP: Sample dataset created: 11 translations
+2025-08-17 01:32:19,348 | dhk_align | INFO | Performance metric: application_startup
+2025-08-17 01:32:19,348 | dhk_align | INFO | 🚀 STARTUP: DHK Align WRAITH ready! (11 translations loaded)
+2025-08-17 01:32:19,348 | dhk_align | INFO | 🚀 STARTUP: 7-step enhanced translation chain active
+2025-08-17 01:33:02,604 | dhk_align | INFO | API request: health_check
+2025-08-17 01:33:02,605 | dhk_align | INFO | Performance metric: database_connection
+2025-08-17 01:33:02,606 | dhk_align | INFO | Health check: healthy
+2025-08-17 01:33:02,606 | dhk_align | INFO | Performance metric: api_health_check
+2025-08-17 01:33:53,767 | dhk_align | INFO | API request: api_translate
+2025-08-17 01:33:53,768 | dhk_align | INFO | Performance metric: database_connection
+2025-08-17 01:33:53,769 | dhk_align | INFO | Database operation: translation_lookup
+2025-08-17 01:33:53,769 | dhk_align | INFO | Performance metric: translation_lookup
+2025-08-17 01:33:53,769 | dhk_align | INFO | Performance metric: api_api_translate

@@ -1,0 +1,48 @@
+============================================================
+DHK ALIGN DATASET VALIDATION REPORT
+============================================================
+Generated: 2025-07-23 20:20:05.679029
+
+SUMMARY STATISTICS:
+  Total rows processed: 415
+  Valid rows: 415
+  Duplicates removed: 0
+  Columns fixed: 4
+  Success rate: 100.0%
+
+ISSUES FOUND:
+  - Duplicate column found: direction
+  - Duplicate column found: tone
+
+DATASET COMPOSITION:
+  Direction distribution:
+    banglish_to_english: 415 (100.0%)
+
+  Tone distribution:
+    neutral: 330 (79.5%)
+    casual: 43 (10.4%)
+    professional: 31 (7.5%)
+    respectful: 10 (2.4%)
+    friendly: 1 (0.2%)
+
+  Language detection:
+    english: 406 (97.8%)
+    banglish: 9 (2.2%)
+
+QUALITY METRICS:
+  Average input length: 64.0 chars
+  Average output length: 65.8 chars
+  Average complexity: 0.385
+  Unique input words: 1628
+
+COVERAGE ANALYSIS:
+  Missing common phrases:
+    - ki koro
+    - kothai jachcho
+    - ki khabo
+
+RECOMMENDATIONS:
+  1. Add more youth/informal tone examples (currently low)
+  2. Include more question patterns
+  3. Add pronunciation guides for cultural terms
+  4. Validate translations with native speakers
