@@ -55,3 +55,7 @@ package-lock.json
 yarn.lock
 # keep private stuff out
 backend-private/
+
+# private vault
+private/*
+!private/packs/
