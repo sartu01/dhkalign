@@ -4,6 +4,7 @@
     "test:e2e": "playwright test e2e"
   },
   "devDependencies": {
-    "@playwright/test": "^1.54.2"
+    "@playwright/test": "^1.54.2",
+    "jest": "^30.0.5"
   }
 }
