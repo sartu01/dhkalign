@@ -59,3 +59,10 @@ backend-private/
 # private vault
 private/*
 !private/packs/
+
+# WRAITH guardrails
+private/*
+*.db
+*.db-shm
+*.db-wal
+inbox/
