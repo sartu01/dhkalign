@@ -1,0 +1,100 @@
+{"input":"Ki sundor!","expected":"How beautiful! (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"Tone-dependent: genuine praise vs sarcastic criticism"}
+{"input":"Bah, khub bhalo hoyeche","expected":"Wow, that went really well (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"Heavy sarcasm when things go wrong"}
+{"input":"Eto taratari","expected":"So quickly (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"easy","notes":"Said when someone is deliberately slow"}
+{"input":"Onek buddhimaan","expected":"Very intelligent (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"easy","notes":"Mocking someone's poor decision"}
+{"input":"Darun lagche","expected":"Looking great (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"Said about something obviously bad"}
+{"input":"Ki kaaj!","expected":"What work! (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"easy","notes":"Criticizing lazy or poor effort"}
+{"input":"Bhishon sundar","expected":"Extremely beautiful (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"Exaggerated praise for ugly things"}
+{"input":"Arre wah!","expected":"Oh wow! (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"easy","notes":"Fake enthusiasm for disappointing news"}
+{"input":"Khub efficient","expected":"Very efficient (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"English loanword used sarcastically"}
+{"input":"Perfect timing","expected":"Perfect timing (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"Said when timing is actually terrible"}
+{"input":"Ek number","expected":"Number one (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"easy","notes":"Fake praise for poor performance"}
+{"input":"Khub helpful","expected":"Very helpful (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"When someone is actually unhelpful"}
+{"input":"Darun idea","expected":"Great idea (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"easy","notes":"Mocking obviously bad suggestions"}
+{"input":"Ki rokom!","expected":"What a way! (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"Criticism disguised as admiration"}
+{"input":"Bhalo to!","expected":"Good then! (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"easy","notes":"Dismissive agreement to bad news"}
+{"input":"Onek smart","expected":"Very smart (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"easy","notes":"Mocking someone's mistake"}
+{"input":"Ki shundor byabostha","expected":"What beautiful arrangement (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"hard","notes":"Criticizing poor organization"}
+{"input":"Darun planning","expected":"Great planning (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"When plans go completely wrong"}
+{"input":"Khushi to","expected":"Happy then (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"easy","notes":"Fake happiness about bad situation"}
+{"input":"Uff ki kaaj","expected":"Ugh what work (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"Criticizing someone's poor effort"}
+{"input":"Boht bhalo","expected":"Very good (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"easy","notes":"Hindi-influenced sarcastic praise"}
+{"input":"Ki dhonya","expected":"How blessed (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"Fake gratitude for problems"}
+{"input":"Arre darun","expected":"Oh great (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"easy","notes":"Sarcastic enthusiasm for bad news"}
+{"input":"Khub professional","expected":"Very professional (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"Mocking unprofessional behavior"}
+{"input":"Perfect solution","expected":"Perfect solution (sarcastic)","category":"sarcasm","dialect":"standard","difficulty":"med","notes":"When solution creates more problems"}
+{"input":"Ainna kita?","expected":"What are you doing?","category":"dialect","dialect":"sylheti","difficulty":"med","notes":"Sylheti variant of 'ki korcho'"}
+{"input":"Hoinna hoinna","expected":"No no","category":"dialect","dialect":"sylheti","difficulty":"easy","notes":"Sylheti emphasis pattern"}
+{"input":"Tumi hoot jaiya?","expected":"Where are you going?","category":"dialect","dialect":"sylheti","difficulty":"med","notes":"Sylheti directional question"}
+{"input":"Ainna hon tu?","expected":"What happened to you?","category":"dialect","dialect":"sylheti","difficulty":"hard","notes":"Sylheti concern expression"}
+{"input":"Eila maa","expected":"Oh mother","category":"dialect","dialect":"sylheti","difficulty":"easy","notes":"Sylheti exclamation"}
+{"input":"Hozon ainna","expected":"How is it now","category":"dialect","dialect":"sylheti","difficulty":"med","notes":"Sylheti status check"}
+{"input":"Tain hain","expected":"That is correct","category":"dialect","dialect":"sylheti","difficulty":"easy","notes":"Sylheti agreement"}
+{"input":"Aigo re","expected":"Oh dear","category":"dialect","dialect":"sylheti","difficulty":"easy","notes":"Sylheti sympathy expression"}
+{"input":"Oun haan","expected":"Yes that one","category":"dialect","dialect":"sylheti","difficulty":"med","notes":"Sylheti confirmation"}
+{"input":"Eila tor","expected":"Oh you","category":"dialect","dialect":"sylheti","difficulty":"easy","notes":"Sylheti address form"}
+{"input":"Hool ainna","expected":"What happened","category":"dialect","dialect":"sylheti","difficulty":"med","notes":"Sylheti inquiry"}
+{"input":"Tumi oun jaon na","expected":"You don't go there","category":"dialect","dialect":"sylheti","difficulty":"hard","notes":"Sylheti negative instruction"}
+{"input":"Aiththan koi","expected":"Where is this","category":"dialect","dialect":"chittagonian","difficulty":"med","notes":"Chittagonian location question"}
+{"input":"Tui kita koros","expected":"What are you doing","category":"dialect","dialect":"chittagonian","difficulty":"easy","notes":"Chittagonian activity question"}
+{"input":"Nare bhai","expected":"No brother","category":"dialect","dialect":"chittagonian","difficulty":"easy","notes":"Chittagonian refusal"}
+{"input":"Hamaar naam","expected":"My name","category":"dialect","dialect":"chittagonian","difficulty":"easy","notes":"Chittagonian possessive"}
+{"input":"Kita hobor","expected":"What news","category":"dialect","dialect":"chittagonian","difficulty":"med","notes":"Chittagonian greeting inquiry"}
+{"input":"Tumi aiso","expected":"You come","category":"dialect","dialect":"chittagonian","difficulty":"easy","notes":"Chittagonian invitation"}
+{"input":"Ekkhan manush","expected":"One person","category":"dialect","dialect":"chittagonian","difficulty":"med","notes":"Chittagonian counting"}
+{"input":"Ghor giya","expected":"Go home","category":"dialect","dialect":"chittagonian","difficulty":"easy","notes":"Chittagonian direction"}
+{"input":"Kalar din","expected":"Yesterday","category":"dialect","dialect":"chittagonian","difficulty":"med","notes":"Chittagonian time reference"}
+{"input":"Beshi khaon na","expected":"Don't eat too much","category":"dialect","dialect":"chittagonian","difficulty":"med","notes":"Chittagonian advice"}
+{"input":"Aar kichu nai","expected":"Nothing else","category":"dialect","dialect":"chittagonian","difficulty":"easy","notes":"Chittagonian completion"}
+{"input":"Hamra shobai","expected":"All of us","category":"dialect","dialect":"chittagonian","difficulty":"med","notes":"Chittagonian group reference"}
+{"input":"Beshi beshi kotha koilen na","expected":"Don't talk too much","category":"dialect","dialect":"chittagonian","difficulty":"hard","notes":"Chittagonian polite restraint"}
+{"input":"Jodi tumi amake bhalobaso tahole ami tomake chhere debo na ar ami tomake khushi rakhbo","expected":"If you love me then I won't leave you and I will keep you happy","category":"grammar","dialect":"standard","difficulty":"hard","notes":"Complex conditional with multiple clauses"}
+{"input":"Ami jei somoy office theke beriyechi tokhon tomar sathe dekha korte parbo","expected":"When I leave the office I can meet with you","category":"grammar","dialect":"standard","difficulty":"hard","notes":"Temporal clause with future conditional"}
+{"input":"Tomar je bondhu gotokal amader barite esechilo se amar kachhe kichu taka cheyechilo","expected":"Your friend who came to our house yesterday asked me for some money","category":"grammar","dialect":"standard","difficulty":"hard","notes":"Relative clause with past perfect"}
+{"input":"Ami chai je tumi amake sheta bole dao je tumi kothai giyechile","expected":"I want you to tell me where you went","category":"grammar","dialect":"standard","difficulty":"hard","notes":"Embedded reported speech"}
+{"input":"Tumi jodi kal na aso tahole ami tomar sathe ar kotha bolbo na","expected":"If you don't come tomorrow then I won't talk to you anymore","category":"grammar","dialect":"standard","difficulty":"med","notes":"Negative conditional with future consequence"}
+{"input":"Ami jantam na je tumi ekhane thako ar tomar baba ekhane kaaj koren","expected":"I didn't know that you live here and your father works here","category":"grammar","dialect":"standard","difficulty":"med","notes":"Past negative with compound embedded clause"}
+{"input":"Tumi ki amake bhalobaso naki shudhu amake diye tomar kaaj korano","expected":"Do you love me or just use me to do your work","category":"grammar","dialect":"standard","difficulty":"med","notes":"Alternative question with purpose clause"}
+{"input":"Ami tomake prothom je din dekhechi sei din theke tomar priyam hoyechi","expected":"From the first day I saw you I fell in love with you","category":"grammar","dialect":"standard","difficulty":"hard","notes":"Temporal marker with emotional state change"}
+{"input":"Tomar moto sundor ar bhalo meye ami ar kothao dekhini","expected":"I haven't seen a girl as beautiful and good as you anywhere else","category":"grammar","dialect":"standard","difficulty":"med","notes":"Comparative construction with negation"}
+{"input":"Ami ja ja korte cheyechilam shegulo korte parini karon tumi amake help koroni","expected":"I couldn't do the things I wanted to do because you didn't help me","category":"grammar","dialect":"standard","difficulty":"hard","notes":"Complex causation with past desires"}
+{"input":"Tomar shotru je tomar birudhe kichu bolbe eta ami age theke jantam","expected":"I knew beforehand that your enemy would say something against you","category":"grammar","dialect":"standard","difficulty":"hard","notes":"Future prediction in past context"}
+{"input":"Ami je boi ta kinechilam seta tomar bhalo lagbe bole ami bhebechilam","expected":"I thought you would like the book that I bought","category":"grammar","dialect":"standard","difficulty":"hard","notes":"Past expectation about future reaction"}
+{"input":"Tumi jei kaj korcho seta thik holeo ami eta approve korte parchi na","expected":"Even though what you're doing is right I can't approve it","category":"grammar","dialect":"standard","difficulty":"hard","notes":"Concessive clause with inability"}
+{"input":"Ami chaile tomar shob shomoshar shomadhan korte partam kintu tumi amake trust koro na","expected":"I could solve all your problems if I wanted but you don't trust me","category":"grammar","dialect":"standard","difficulty":"hard","notes":"Hypothetical ability with contrasting reality"}
+{"input":"Tomar je decision niyecho seta amader relationship er jonno khubi kharap hobe","expected":"The decision you made will be very bad for our relationship","category":"grammar","dialect":"standard","difficulty":"med","notes":"Relative clause with future consequence"}
+{"input":"Jei meye tar shathe tumi kotha bolchile se ki tomar girlfriend","expected":"Is the girl you were talking to your girlfriend","category":"grammar","dialect":"standard","difficulty":"med","notes":"Relative clause in question form"}
+{"input":"Tumi je shomoy amar shathe thakbe sei shomoy ami khushi thakbo","expected":"I will be happy when you are with me","category":"grammar","dialect":"standard","difficulty":"med","notes":"Temporal correlation with emotional state"}
+{"input":"Ami jodi tomar moto smart hotam tahole ami o successful hotam","expected":"If I were smart like you then I would also be successful","category":"grammar","dialect":"standard","difficulty":"med","notes":"Counterfactual conditional"}
+{"input":"Tomar baba je business koren seta ki profitable","expected":"Is the business your father does profitable","category":"grammar","dialect":"standard","difficulty":"easy","notes":"Simple relative clause question"}
+{"input":"Ami jar shathe kotha bolchi se amar cousin","expected":"The person I'm talking to is my cousin","category":"grammar","dialect":"standard","difficulty":"easy","notes":"Simple relative clause identification"}
+{"input":"Tumi ja khao ta healthy ar nutritious","expected":"What you eat is healthy and nutritious","category":"grammar","dialect":"standard","difficulty":"easy","notes":"General relative with compound predicate"}
+{"input":"Ami jar boi ta niyechi se amake phone koreche","expected":"The person whose book I took called me","category":"grammar","dialect":"standard","difficulty":"med","notes":"Possessive relative clause"}
+{"input":"Tumi je gaan ta shuncho seta amar favorite","expected":"The song you listen to is my favorite","category":"grammar","dialect":"standard","difficulty":"easy","notes":"Simple object relative clause"}
+{"input":"Ami jar recommendation peye ei movie ta dekhechi","expected":"I watched this movie based on whose recommendation I got","category":"grammar","dialect":"standard","difficulty":"med","notes":"Source attribution in relative clause"}
+{"input":"Tumi jaake bhalobasho se ki tomake bhalobashe","expected":"Does the person you love love you back","category":"grammar","dialect":"standard","difficulty":"med","notes":"Reciprocal relationship question"}
+{"input":"Bhetki maach","expected":"Perch fish (slang for attractive person)","category":"slang","dialect":"standard","difficulty":"hard","notes":"Fish name used as beauty compliment"}
+{"input":"Chobi tola","expected":"Taking pictures (slang for showing off)","category":"slang","dialect":"standard","difficulty":"med","notes":"Photography metaphor for vanity"}
+{"input":"Tension na","expected":"Don't worry (but could mean give up)","category":"slang","dialect":"standard","difficulty":"med","notes":"Ambiguous: reassurance vs dismissal"}
+{"input":"Line mara","expected":"Hitting on someone (could be harassment)","category":"slang","dialect":"standard","difficulty":"hard","notes":"Context-sensitive: flirting vs inappropriate advance"}
+{"input":"Jhamela","expected":"Trouble (but also exciting drama)","category":"slang","dialect":"standard","difficulty":"med","notes":"Negative word sometimes used positively"}
+{"input":"Current laga","expected":"Getting shocked (electric or surprised)","category":"slang","dialect":"standard","difficulty":"med","notes":"Dual meaning: literal electricity or emotional shock"}
+{"input":"Dhanda","expected":"Business (legitimate or shady)","category":"slang","dialect":"standard","difficulty":"hard","notes":"Context determines if legal business or illegal activity"}
+{"input":"Fundoo","expected":"Expert (sometimes sarcastic)","category":"slang","dialect":"standard","difficulty":"med","notes":"Can be genuine praise or mocking"}
+{"input":"Ghanta","expected":"Bell (slang for nothing/bullshit)","category":"slang","dialect":"standard","difficulty":"med","notes":"Literal meaning vs dismissive slang"}
+{"input":"Solid","expected":"Good (but sometimes means stubborn)","category":"slang","dialect":"standard","difficulty":"easy","notes":"English word with extended Bengali meanings"}
+{"input":"Phata","expected":"Broken (or excellent/awesome)","category":"slang","dialect":"standard","difficulty":"hard","notes":"Opposite meanings depending on context"}
+{"input":"Bindaas","expected":"Carefree (or reckless)","category":"slang","dialect":"standard","difficulty":"med","notes":"Positive trait that can become negative"}
+{"input":"Scene","expected":"Situation (or romantic interest)","category":"slang","dialect":"standard","difficulty":"med","notes":"General context vs specific romantic context"}
+{"input":"Pataka","expected":"Firecracker (slang for hot girl or trouble)","category":"slang","dialect":"standard","difficulty":"hard","notes":"Beauty compliment that can objectify"}
+{"input":"Setting","expected":"Arrangement (legitimate or corrupt)","category":"slang","dialect":"standard","difficulty":"hard","notes":"Neutral planning vs underhanded dealing"}
+{"input":"Magir pola","expected":"Son of a witch (mild insult)","category":"safety","dialect":"standard","difficulty":"med","notes":"Mild profanity, context-dependent severity"}
+{"input":"Harami","expected":"Bastard (moderate insult)","category":"safety","dialect":"standard","difficulty":"med","notes":"Common insult, avoid in polite company"}
+{"input":"Kuttar bachcha","expected":"Son of a dog (insult)","category":"safety","dialect":"standard","difficulty":"easy","notes":"Animal-based insult, mildly offensive"}
+{"input":"Sala","expected":"Brother-in-law (used as mild curse)","category":"safety","dialect":"standard","difficulty":"easy","notes":"Relationship term used inappropriately"}
+{"input":"Gadha","expected":"Donkey (calling someone stupid)","category":"safety","dialect":"standard","difficulty":"easy","notes":"Animal name as intelligence insult"}
+{"input":"Boka","expected":"Idiot (mild intelligence insult)","category":"safety","dialect":"standard","difficulty":"easy","notes":"Common mild insult for stupidity"}
+{"input":"Khankir pola","expected":"Son of a prostitute (strong insult)","category":"safety","dialect":"standard","difficulty":"hard","notes":"Strong profanity, highly offensive"}
+{"input":"Tor maa","expected":"Your mother (insult prefix)","category":"safety","dialect":"standard","difficulty":"med","notes":"Family-targeting insult, contextually offensive"}
+{"input":"Ullu","expected":"Owl (calling someone foolish)","category":"safety","dialect":"standard","difficulty":"easy","notes":"Bird name used for mild mockery"}
+{"input":"Chotlok","expected":"Low-class person (classist insult)","category":"safety","dialect":"standard","difficulty":"med","notes":"Social class-based discrimination"}
