@@ -53,3 +53,5 @@ inbox/archive/
 # Lock files (optional to ignore)
 package-lock.json
 yarn.lock
+# keep private stuff out
+backend-private/
