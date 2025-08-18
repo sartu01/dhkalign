@@ -1,7 +1,8 @@
 {
   "scripts": {
     "test": "jest",
-    "test:e2e": "playwright test e2e"
+    "test:e2e": "playwright test e2e",
+    "sync:packs": "bash scripts/sync_packs.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.54.2",
