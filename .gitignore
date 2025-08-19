@@ -1,68 +1,54 @@
-# Python venv
-venv*/
-__pycache__/
-
-# macOS junk
+# Node / React
+node_modules/
+build/
+dist/
+coverage/
+*.log
+logs/
 .DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp
+.pnp.js
 
-# Node
-node_modules/
+# Python / FastAPI
+backend/.venv/
+backend/venv/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 
-# Data outputs
-data/CSVtoMERGE/
-*.db-shm
-*.db-wal
-
-# Inbox
-inbox/CLAUDE_DUMP.txt
-
-# Reports
-reports/
-
-# Python
-venv*/
-__pycache__/
-*.pyc
-
-# Node
-node_modules/
-npm-debug.log
-yarn-error.log
-
-# Env & config
+# Envs & Secrets
 *.env
 .env.*
-!.env.example   # keep a template only
-
-# macOS
-.DS_Store
-
-# Data / outputs
-data/CSVtoMERGE/
-*.db
-*.db-shm
-*.db-wal
-reports/
-logs/
-test-results/
-
-# Inbox dumps
-inbox/CLAUDE_DUMP.txt
-inbox/archive/
+!.env.example   # keep only template
 
 # Lock files (optional to ignore)
 package-lock.json
 yarn.lock
-# keep private stuff out
-backend-private/
 
-# private vault
+# Private areas
+backend-private/
 private/*
 !private/packs/
 
-# WRAITH guardrails
-private/*
+# Data / DBs
 *.db
 *.db-shm
 *.db-wal
+*.sqlite*
+
+# Inbox + reports
 inbox/
+inbox/archive/
+reports/
+test-results/
+
+# Backups
+_backup/
+
+# WRAITH guardrails
+long_tail.py

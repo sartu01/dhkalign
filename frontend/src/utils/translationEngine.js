@@ -37,6 +37,92 @@ try {
   };
 }
 
+// ===== WRAITH: public pack loader (JSONL) =====
+const PUBLIC_PACK_PATH = '/data/expansion';
+// keep names short
+const DEFAULT_PACKS = ['greet', 'vend', 'slang', 'trans', 'food'];
+
+// Parse a .jsonl string into an array of objects
+function parseJSONL(text) {
+  return (text || '')
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l && !l.startsWith('//'))
+    .map(l => {
+      try { return JSON.parse(l); } catch { return null; }
+    })
+    .filter(Boolean);
+}
+
+// Convert JSONL entries into a simple phrase map { banglish: english }
+function entriesToMap(entries) {
+  const out = {};
+  for (const row of entries) {
+    const key = (row.banglish || row.source || '').toLowerCase().trim();
+    const val = (row.english || row.translation || '').toLowerCase().trim();
+    if (key && val) out[key] = val;
+    // also index variants if present
+    if (Array.isArray(row.variants)) {
+      row.variants.forEach(v => {
+        const vk = String(v || '').toLowerCase().trim();
+        if (vk && val) out[vk] = val;
+      });
+    }
+  }
+  return out;
+}
+
+// --- Helpers to support both .jsonl and .json pack formats ---
+async function fetchTextIfExists(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
+// Accepts JSON that can be: array of entries, {phrases:[...]}, or a {banglish: english} map
+function parseJSONFlexible(text) {
+  try {
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.phrases)) return data.phrases;
+    if (data && typeof data === 'object') {
+      // Convert { banglish: english } map into entry array
+      const maybeMap = Object.entries(data)
+        .filter(([k, v]) => typeof k === 'string' && (typeof v === 'string' || (v && typeof v.english === 'string')));
+      if (maybeMap.length > 0) {
+        return maybeMap.map(([banglish, value]) => {
+          if (typeof value === 'string') return { banglish, english: value };
+          return { banglish, english: value.english, variants: value.variants || [] };
+        });
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null;
+}
+
+// Load a pack by base name, trying .jsonl first, then .json
+async function loadPackByBaseName(base) {
+  // Prefer line-delimited JSONL (stream/append-friendly)
+  const jsonlText = await fetchTextIfExists(`${PUBLIC_PACK_PATH}/${base}.jsonl`);
+  if (jsonlText) {
+    const entries = parseJSONL(jsonlText);
+    return entriesToMap(entries);
+  }
+  // Fallback to classic JSON
+  const jsonText = await fetchTextIfExists(`${PUBLIC_PACK_PATH}/${base}.json`);
+  if (jsonText) {
+    const entries = parseJSONFlexible(jsonText) || [];
+    return entriesToMap(entries);
+  }
+  return {};
+}
+
 // Simple LRU Cache (can be swapped with PersistentLRUCache later)
 class SimpleLRUCache {
   constructor(maxSize = 50) {
@@ -114,6 +200,50 @@ class TranslationEngine {
       this.adaptiveCache = new Map();
       this.feedbackData = this.loadFeedbackData();
       this.slangMap = this.buildSlangMap();
+    }
+    // Track async pack loading status
+    this._packsLoaded = false;
+  }
+
+  /**
+   * Merge new phrase map into engine and rebuild indices
+   */
+  _mergeTranslations(map) {
+    if (!map) return;
+    this.translations = { ...(this.translations || {}), ...map };
+    this._rebuildIndices();
+  }
+
+  /**
+   * Rebuild all derived indices after data changes
+   */
+  _rebuildIndices() {
+    // Recreate or refresh indices based on current translations
+    this.wordIndex = this.buildWordIndex();
+    this.patternMatchers = this.buildPatternMatchers();
+    this.ngramIndex = this.buildNgramIndex();
+    this.wordWeights = this.calculateWordWeights();
+  }
+
+  /**
+   * Load packs from frontend/public/data/expansion at runtime.
+   * Safe to call multiple times; subsequent calls are no-ops.
+   */
+  async ensurePacksLoaded(packNames = DEFAULT_PACKS) {
+    if (this._packsLoaded) return;
+    try {
+      const loaded = {};
+      for (const name of packNames) {
+        const map = await loadPackByBaseName(name);
+        Object.assign(loaded, map);
+      }
+      if (Object.keys(loaded).length) {
+        this._mergeTranslations(loaded);
+      }
+      this._packsLoaded = true;
+    } catch (e) {
+      console.warn('Pack load failed:', e?.message || e);
+      this._packsLoaded = true; // avoid retry loop during session
     }
   }
 
@@ -782,6 +912,8 @@ export function useTranslation(config = {}) {
       // Update config if provided
       engineInstance.updateConfig(config);
     }
+    // Fire-and-forget: load public packs into the engine
+    engineInstance.ensurePacksLoaded?.();
     return engineInstance;
   }, []);
   
