@@ -52,3 +52,15 @@ _backup/
 
 # WRAITH guardrails
 long_tail.py
+### WRAITH LOCKS
+**/.env*
+private/
+backend/data/
+*.db
+*.db-*
+audits/
+provenance/
+**/.DS_Store
+private/inbox_home_sweep_*/
+private/archive_desktop_translator_*/
+.git_deleted.txt
