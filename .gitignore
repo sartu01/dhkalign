@@ -64,3 +64,10 @@ provenance/
 private/inbox_home_sweep_*/
 private/archive_desktop_translator_*/
 .git_deleted.txt
+
+# VS Code
+.vscode/
+# Backup file
+backend/security_middleware.py.bak
+# Generated cache
+frontend/src/data/
