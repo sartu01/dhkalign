@@ -53,7 +53,7 @@ secure_log("temp_ban", {"ip": ip},"ERROR")
 	•	KV minute‑bucket per‑IP rate limit (100/min default)
 	•	UA challenge (block obvious bots/curl)
 	•	Optional geo block list
-	•	Forward only GET /health, POST /translate to private origin
+	•	Forward only GET /health, POST /translate, POST /translate/pro to private origin
 	•	wrangler.toml (skeleton)
 name = "dhkalign-core"
 main = "gateway/worker.js"
@@ -111,6 +111,6 @@ PY
 
 9) Runbook (tiny)
 	•	Logs: private/audit/security.jsonl (HMAC’ed)
-	•	Backups: private/backups/YYYY-MM-DD_translations.db.gpg
+	•	Backups: private/backups/YYYY-MM-DD_translations.db (cron nightly; GPG encryption planned)
 	•	Rotate: API_KEYS monthly; AUDIT_HMAC_SECRET quarterly (with re‑sign window)
 	•	Incident: temp ban IP in CF, rotate keys, export logs, snapshot DB, root‑cause, patch test, redeploy

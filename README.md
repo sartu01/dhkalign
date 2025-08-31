@@ -1,225 +1,205 @@
-# DHK Align - Private Banglish ⇄ English Translator
+# DHK Align — Banglish ⇄ English Transliterator‑tion (Secured MVP)
 
-[![Version](https://img.shields.io/badge/version-1.0.0-black.svg)](#)
-[![React](https://img.shields.io/badge/React-18.x-blue.svg)](https://react.dev/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.1x-009688.svg)](https://fastapi.tiangolo.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Security](https://img.shields.io/badge/security-first-red.svg)](docs/SECURITY.md)
-[![Privacy](https://img.shields.io/badge/privacy-100%25-purple.svg)](docs/PRIVACY.md)
+[![Status](https://img.shields.io/badge/state-secured_MVP-0b7.svg)](#)
+[![FastAPI](https://img.shields.io/badge/FastAPI-≥0.111-009688.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18.x-00d8ff.svg)](https://react.dev/)
+[![Security](https://img.shields.io/badge/security-defense_in_depth-cd2f2e.svg)](docs/SECURITY.md)
 
-A privacy-first, culturally-aware translation platform for Banglish (Bengali written in English) ⇄ English conversion. **All translations happen in your browser** – your data never leaves your device.
+A **security‑first**, culturally‑aware transliterator‑tion engine for **Banglish (Bengali in Roman script) ⇄ English**.  
+The app now runs with a **Free (safe) API** and a **Pro (gated) API** backed by a local SQLite datastore.
 
----
-
-## 🌟 Key Features
-
-- **🔒 100% Private**: Client-side translation engine – no server dependency  
-- **⚡ Lightning Fast**: <50ms translation with intelligent caching  
-- **🎯 Culturally Aware**: Preserves Bengali cultural context and nuances  
-- **📱 Mobile First**: Responsive design, PWA-ready  
-- **🌐 Offline Capable**: Works without internet after first load  
-- **🧠 Smart Engine**: 8-layer fallback system with fuzzy matching  
-- **💰 Fair Pricing**: Free demo + affordable Pro tier  
+- **Free**: `/translate` serves **safety_level ≤ 1** (safe) entries, with a client cache for speed.
+- **Pro**: `/translate/pro` serves **safety_level ≥ 2** packs (slang / profanity / dialects) with an **API key**.
+- **Defense‑in‑depth**: strict middleware (schema, size caps, CORS, headers), dual rate‑limits, and HMAC audit logs.
 
 ---
 
-## 🏗️ Architecture
+## 🌟 What’s Live
+
+- **Endpoints**: `GET /health`, `POST /translate`, `POST /translate/pro` (API key)
+- **Data split**: `safety_level ≤ 1` (free) vs `≥ 2` (pro) with packs:
+  - `slang`, `profanity`, `dialect-sylheti`
+- **Security**: input validation & sanitization, **2KB** payload cap, CORS allowlist, security headers, IP+fingerprint rate‑limit, temp bans, **HMAC‑signed** audit logs
+- **Ops**: one‑liner server script, nightly cron backups
+
+---
+
+## 🏗️ Current Architecture (repo truth)
 
 ```
 dhkalign/
-├── frontend/              # React SPA with client-side engine
-│   ├── src/
-│   │   ├── components/    # UI components
-│   │   ├── utils/         # Translation engine + helpers
-│   │   └── api/           # Optional backend integration
-│   └── public/            # Static assets
-├── backend/               # Optional FastAPI for analytics
-│   ├── main.py            # API routes
-│   ├── utils/             # Logging & monitoring
-│   └── logs/              # Structured logs (JSONL)
-├── docs/                  # Documentation
-│   └── ARCHITECTURE.md    # System design details
-└── README.md              # This file
+├─ backend/                     # FastAPI app (SQLite source of truth)
+│  ├─ app_sqlite.py             # API app (health, /translate, mounts pro router)
+│  ├─ pro_routes.py             # /translate/pro (API key gated; packs/tiers)
+│  ├─ security_middleware.py    # schema checks, CORS, headers, RL, audit hooks
+│  ├─ data/
+│  │  └─ translations.db        # SQLite DB (safe + pro rows)
+│  ├─ scripts/
+│  │  ├─ normalize_jsonl.py     # make raw JSONL → CLEAN.jsonl
+│  │  ├─ import_clean_jsonl.py  # load CLEAN.jsonl → SQLite (upsert)
+│  │  ├─ export_client_cache.py # SQLite → frontend cache (safety ≤ 1)
+│  │  └─ secure_log.py          # HMAC append‑only audit logger
+├─ frontend/                    # React SPA (optional client cache)
+│  └─ src/data/dhk_align_client.json  # generated safe cache
+├─ private/                     # 🔒 packs and drafts (not tracked)
+│  ├─ packs_raw/newstuff/       # drafts & CLEAN files (safe/pro)
+│  └─ pro_packs/{slang,profanity,youth_culture}/
+├─ scripts/
+│  ├─ run_server.sh             # start uvicorn with env + sane reload
+│  └─ backup_db.sh              # nightly DB backup (used by cron)
+├─ gateway/                     # Cloudflare Worker (edge shield; planned)
+│  ├─ worker.js
+│  └─ wrangler.toml
+├─ docs/
+│  ├─ SECURITY.md               # high‑level posture (edge + origin)
+│  └─ NEXT_TODO.md              # iron‑clad next steps
+└─ README.md
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Local)
 
-### Option 1: Frontend Only (Recommended)
+> **Prereq**: macOS + Python 3.11+ + Node 18+; repo located at `~/Dev/dhkalign`
 
+**Start API (server tab):**
 ```bash
-git clone https://github.com/sartu01/dhkalign.git
-cd dhkalign/frontend
-npm install
-npm start
+cd ~/Dev/dhkalign
+./scripts/run_server.sh
 ```
 
-Visit http://localhost:3000 and start translating!
-
-### Option 2: With Backend (Analytics & Feedback)
-
+**Health (work tab):**
 ```bash
-# Terminal 1: Start backend
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate  # Windows: .\.venv\Scripts\activate
-pip install -r requirements.txt
-python main.py
-
-# Terminal 2: Start frontend
-cd frontend
-npm install
-npm start
+curl -s http://127.0.0.1:8090/health | jq .
+# {"ok":true,"db":".../backend/data/translations.db","safe_rows":446}
 ```
 
----
-
-## 🧠 Translation Engine
-
-| Step | Method | Confidence | Example |
-|------|--------|------------|---------|
-| 1 | Exact Match | 1.0 | kemon acho → how are you |
-| 2 | Slang Database | 0.95 | ki obostha → what's up |
-| 3 | Fuzzy/Phonetic | 0.8–0.9 | kemon aco → how are you |
-| 4 | Compound Words | 0.85 | ekhonei → right now |
-| 5 | Pattern Matching | 0.8–0.95 | ami ki korbo → what will I do |
-| 6 | N-gram Matching | 0.75 | Partial phrase matching |
-| 7 | Contextual | 0.85 | Context-aware lookups |
-| 8 | Weighted Word-by-Word | Variable | TF-IDF weighted fallback |
-
----
-
-## 💰 Monetization
-
-| Tier | Price | Features |
-|------|-------|----------|
-| **Free Demo** | $0 | 5 translations/day, No account needed |
-| **Pro** | $4.99/month | Unlimited translations, Priority support |
-| **Lifetime** | $29.99 | One-time payment, All Pro features forever |
-
-Payments supported:  
-- **Traditional**: Stripe (Credit/Debit, Apple Pay, Google Pay)  
-- **Crypto**: BTCPay Server (Bitcoin, Monero)  
-- **Regional**: bKash, Rocket (coming soon)  
-
----
-
-## 📊 Performance Metrics
-
-| Metric | Value | Notes |
-|--------|-------|-------|
-| Translation Speed | <50ms | Average with caching |
-| Bundle Size | ~150KB | Includes translation dataset |
-| First Load | <1.5s | With CDN delivery |
-| Cache Hit Rate | ~85% | In typical usage |
-| Offline Ready | 100% | After first load |
-
----
-
-## 🔒 Security & Privacy
-
-- ✅ **Zero Server Calls**: All translations happen in-browser  
-- ✅ **No Tracking**: No analytics or cookies by default  
-- ✅ **No User Data**: No accounts required for free tier  
-- ✅ **Open Source**: Fully auditable codebase  
-- ✅ **E2E Encrypted**: Pro user preferences encrypted  
-
-See [docs/SECURITY.md](docs/SECURITY.md) and [docs/PRIVACY.md](docs/PRIVACY.md).
-
----
-
-## 📚 Documentation
-
-- [📖 Architecture Overview](docs/ARCHITECTURE.md) – System design and data flow  
-- [🔒 Security Policy](docs/SECURITY.md) – Threat model and security measures  
-- [🛡️ Privacy Policy](docs/PRIVACY.md) – Data handling and user rights  
-- [🤝 Contributing Guide](docs/CONTRIBUTING.md) – How to contribute  
-- [⚙️ Frontend Setup](frontend/README.md) – React development guide  
-- [🔧 Backend Setup](backend/README.md) – FastAPI development guide  
-
----
-
-## 🛠️ Development
-
-### Prerequisites
-- Node.js 16+ (18+ recommended)  
-- npm 8+  
-- Python 3.10+ (for backend)  
-
-### Setup
-
+**Free translate (work tab):**
 ```bash
-# Frontend
-cd frontend
-cp .env.example .env
-
-# Backend
-cd backend
-cp .env.example .env
+curl -s -X POST http://127.0.0.1:8090/translate \
+  -H "Content-Type: application/json" \
+  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | jq .
 ```
 
-### Tests
-
+**Pro translate (API key)**
 ```bash
-cd frontend && npm test
-cd backend && pytest
+KEY=$(grep '^API_KEYS=' backend/.env | cut -d= -f2)
+PHRASE=$(sed -n '1p' private/pro_packs/slang/dhk_align_slang_pack_002.CLEAN.jsonl | jq -r .banglish)
+curl -s -X POST http://127.0.0.1:8090/translate/pro \
+  -H "Content-Type: application/json" -H "x-api-key: $KEY" \
+  -d "{\"text\":\"$PHRASE\",\"pack\":\"slang\"}" | jq .
 ```
 
 ---
 
-## 🚀 Deployment
+## 🔑 Environment (`backend/.env`)
 
-### Frontend (Netlify/Vercel)
-
-```bash
-cd frontend
-npm run build
-# Deploy /build directory
+```
+CORS_ORIGINS=http://localhost:3000,https://dhkalign.com
+API_KEYS=<hex>                 # internal key(s) for /translate/pro
+AUDIT_HMAC_SECRET=<hex>       # HMAC for append‑only audit logs
 ```
 
-### Backend (Optional)
+The app auto‑loads `.env` (via `python-dotenv`), so you don’t need `--env-file` in dev.
 
+---
+
+## 🔒 Security & Ops (implemented)
+
+**Origin middleware**  
+- Strict JSON schema (`text` required, ≤1000 chars)  
+- Sanitization (strip SQL‑ish tokens, path traversal), **2KB** POST limit  
+- CORS allowlist, **security headers** (HSTS/CSP/nosniff/frame‑deny/referrer)  
+- IP + fingerprint (UA/Accept/Language) **rate‑limit** (60/min), temp bans after 5 bad  
+- **API key** required on `/translate/pro`
+
+**Audit**  
+- **HMAC‑signed** append‑only JSONL at `private/audit/security.jsonl`  
+- Logged events: `bad_request`, `auth_fail`, `rate_limited`, `cors_block`, `temp_ban_*`
+
+**Backups**  
+- Nightly cron (2:05 AM): `./scripts/backup_db.sh` → `private/backups/YYYY-MM-DD_translations.db`
+
+**Edge shield (planned)**  
+- Cloudflare Worker + KV minute‑bucket rate limiting; origin hidden behind CF  
+- Allowlist paths: `/health`, `/translate`, `/translate/pro`
+
+---
+
+## 🧠 Data & Packs
+
+- **safety_level ≤ 1** → exposed to Free API and client cache  
+- **safety_level ≥ 2** → available via Pro API (key required)  
+- Packs in use: `slang`, `profanity`, `dialect-sylheti`
+
+**Importing packs**  
 ```bash
-docker-compose up -d
-# or systemctl start dhkalign-backend
+# Normalize raw → CLEAN
+python3 backend/scripts/normalize_jsonl.py private/packs_raw/newstuff/dhk_align_cultural_pack_001.jsonl \
+  private/packs_raw/newstuff/dhk_align_cultural_pack_001.CLEAN.jsonl cultural 1
+
+# Import CLEAN → SQLite
+python3 backend/scripts/import_clean_jsonl.py private/packs_raw/newstuff/dhk_align_cultural_pack_001.CLEAN.jsonl
+```
+
+**Export safe client cache**  
+```bash
+python3 backend/scripts/export_client_cache.py
+# writes frontend/src/data/dhk_align_client.json (safety ≤ 1 only)
+```
+
+---
+
+## 📡 API Reference (local)
+
+**GET `/health`** → `{ ok:boolean, db:string, safe_rows:number }`
+
+**POST `/translate`** (Free)  
+`Content-Type: application/json`  
+```json
+{ "text": "kemon acho", "src_lang": "banglish", "dst_lang": "english" }
+```
+
+**POST `/translate/pro`** (Pro)  
+Headers: `x-api-key: <hex>`  
+Body: `{ "text": "...", "pack": "slang|profanity|dialect-sylheti" }`
+
+Rate‑limits apply; wrong content-type/oversized/malformed JSON returns **415/413/400**.
+
+---
+
+## 🧩 Development
+
+**Venv** is at `backend/.venv`. VS Code workspace setting should use:  
+`python.defaultInterpreterPath = ${workspaceFolder}/backend/.venv/bin/python`
+
+**Helpers**
+```bash
+./scripts/run_server.sh   # start uvicorn with sane reload + env
+./scripts/backup_db.sh    # make a dated SQLite backup
 ```
 
 ---
 
 ## 🗺️ Roadmap
 
-- **v1.0 (Now)**: 8-layer engine, 450+ phrases, PWA support, Pro/Lifetime pricing  
-- **v1.1 (Q3 2025)**: Voice input, 1k+ phrases, Chrome extension, accessibility polish  
-- **v2.0 (Q4 2025)**: Regional dialects, API keys, mobile apps, curated packs  
+- **Edge**: publish Cloudflare Worker + KV (rate‑limit + origin shield)
+- **Cache**: in‑process TTL for API responses (reduce repeat DB hits)
+- **Admin**: `/admin/health` with metrics (requests, cache hit rate, threats blocked)
+- **Guard**: GPT fallback with prompt‑injection checks + token/day caps (Pro only)
+- **Quotas**: per‑key usage counters + rotation (KV/SQLite)
 
 ---
 
-## 🤝 Contributing
+## 📄 License & Support
 
-See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). PRs welcome!
+MIT – see `LICENSE`.
 
----
-
-## 📄 License
-
-MIT License – see [LICENSE](LICENSE).
-
----
-
-## 📞 Support
-
-- General: [info@dhkalign.com](mailto:info@dhkalign.com)  
-- Admin: [admin@dhkalign.com](mailto:admin@dhkalign.com)  
-- Security: [admin@dhkalign.com](mailto:admin@dhkalign.com) (subject "SECURITY")
+- General: **info@dhkalign.com**  
+- Admin/Security: **admin@dhkalign.com** (subject “SECURITY”)
 
 ---
 
 <div align="center">
-  <h3>Made with ❤️ for the Bengali community worldwide</h3>
-  <p>
-    <a href="https://dhkalign.com">Website</a> • 
-    <a href="https://github.com/sartu01/dhkalign">GitHub</a> • 
-    <a href="https://twitter.com/dhkalign">Twitter</a>
-  </p>
+  <h3>Built for the Bengali community — the first Transliterator‑tion, secured by design.</h3>
 </div>

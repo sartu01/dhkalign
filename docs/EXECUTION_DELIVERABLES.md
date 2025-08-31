@@ -1,8 +1,8 @@
-# DHK Align: Execution Deliverables
-# PASTE CLAUDE'S FULL TEXT HERE (from "DHK Align: Execution Deliverables" down)
-# DHK Align: Execution Deliverables
+# DHK Align: Execution Deliverables (Transliterator‑tion Engine)
 
 ## 1. Dataset Schema + Versioning
+
+> Dataset powering the first Transliterator‑tion engine — curated, versioned, and safe/pro split.
 
 ### JSONL Schema (data/schema.jsonl)
 ```json
@@ -11,7 +11,8 @@
   "source": "assalamu alaikum",
   "variant": ["salam", "salamualaikum"],
   "translit": "assalamu alaikum",
-  "translation": "peace be upon you",
+  "transliteration": "assalamu alaikum",
+  "translation_en": "peace be upon you",
   "context_tag": "greeting_religious",
   "region": "dhk_general",
   "confidence": 0.95,
@@ -46,6 +47,8 @@ data/
 - **id**: `{pack}_{incremental}` (street_001, vendor_025)
 - **source**: Original Banglish as typed
 - **variant**: Array of alternate spellings
+- **transliteration**: Standard transliteration form
+- **translation_en**: English translation
 - **context_tag**: `{domain}_{subdomain}` (greeting_casual, vendor_bargain)
 - **region**: dhk_general, syl_rural, cox_coastal
 - **confidence**: 0.0-1.0 (curator assessment)
@@ -93,13 +96,13 @@ describe('Slang Detection', () => {
 });
 ```
 
-#### Translation Engine (15 tests)
+#### Transliterator‑tion Engine (15 tests)
 ```javascript
 // tests/engine.test.js
-describe('Translation Engine', () => {
+describe('Transliterator‑tion Engine', () => {
   test('exact matches', () => {
     expect(translate('assalamu alaikum')).toMatchObject({
-      translation: 'peace be upon you',
+      translation_en: 'peace be upon you',
       confidence: 0.95,
       method: 'exact'
     });
@@ -107,7 +110,7 @@ describe('Translation Engine', () => {
   
   test('fuzzy fallback', () => {
     expect(translate('asalam alaikum')).toMatchObject({
-      translation: 'peace be upon you',
+      translation_en: 'peace be upon you',
       confidence: 0.85,
       method: 'fuzzy'
     });
@@ -115,7 +118,7 @@ describe('Translation Engine', () => {
   
   test('compound handling', () => {
     expect(translate('mama eta koto')).toMatchObject({
-      translation: 'uncle, how much is this',
+      translation_en: 'uncle, how much is this',
       method: 'compound'
     });
   });
@@ -126,7 +129,7 @@ describe('Translation Engine', () => {
 
 ```javascript
 // e2e/user-flows.spec.js
-test('Basic translation flow', async ({ page }) => {
+test('Basic transliterator‑tion flow', async ({ page }) => {
   await page.goto('/');
   await page.fill('[data-testid=input]', 'eta koto');
   await page.click('[data-testid=translate]');
@@ -213,7 +216,7 @@ async function runBenchmarks() {
     
     results.latency.measurements.push(duration);
     
-    if (result.translation.toLowerCase().includes(phrase.expected.toLowerCase())) {
+    if (result.translation_en.toLowerCase().includes(phrase.expected.toLowerCase())) {
       results.accuracy.correct++;
     }
     results.accuracy.total++;
@@ -234,10 +237,10 @@ async function runBenchmarks() {
 
 ## 4. README + Demo Polish
 
-### Root README Structure
+### Root README (Transliterator‑tion)
 ```markdown
 # DHK Align
-**Offline-first Banglish ↔ English transliterator with street-level context**
+**Offline-first Banglish ↔ English transliterator‑tion engine with street-level context**
 
 [Demo](https://dhk-align.vercel.app) • [API Docs](./docs/api.md) • [Contributing](./CONTRIBUTING.md)
 
@@ -275,13 +278,12 @@ npm start  # Frontend on :3000
    - Custom domain: dhk-align.com
 
 2. **Backend**: Deploy to Railway/Render
-   - FastAPI with /translate endpoint
-   - Analytics endpoint for usage tracking
-   - CORS enabled for frontend domain
+   - FastAPI with /translate and /translate/pro (private origin, API key gate)
+   - Origin hidden; all traffic passes through Cloudflare Worker
 
 ### Loom Walkthrough Script (90 seconds)
 1. **0-15s**: "This is DHK Align - helps you blend in Bangladesh with authentic Banglish"
-2. **15-30s**: Show translation: "eta koto" → "how much is this" + context explanation
+2. **15-30s**: Show transliterator‑tion: "eta koto" → "how much is this" + context explanation
 3. **30-45s**: Demonstrate offline mode (disconnect internet, still works)
 4. **45-60s**: Show slang detection: "pagol naki" → informal warning + usage context
 5. **60-75s**: Quick vendor scenario: "ekto kom den" → bargaining phrase
@@ -308,7 +310,7 @@ npm start  # Frontend on :3000
    - Example: "Jodi ami kal Dhaka theke Sylhet jete pari tahole..." (complex conditional)
 
 4. **Cultural Context Depth**
-   - Translates words, not cultural meaning
+   - Transliterates words, not cultural meaning
    - "Mama" → "uncle" (correct)
    - But misses: When to use it, relationship implications
 
@@ -337,3 +339,9 @@ This honesty builds trust and sets realistic expectations for users and contribu
 4. **Week 4**: Demo deployment + documentation polish
 
 Each deliverable is standalone and testable. No dependencies on external approvals.
+
+## 6. Security Integration (Added Posture)
+- **Hidden backend**: origin private, accessed only through Cloudflare Worker.
+- **Audit logging**: all bad requests, rate-limits, and auth fails recorded in HMAC‑signed JSONL (`private/audit/security.jsonl`).
+- **Backups**: nightly cron, local only.
+- **Edge shield**: Worker enforces rate‑limit and allowlist paths before origin.

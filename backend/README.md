@@ -743,3 +743,147 @@ MIT License - see [LICENSE](../LICENSE) file for details.
     <a href="mailto:admin@dhkalign.com">Admin</a>
   </p>
 </div>
+
+# DHK Align — Backend (FastAPI, Private Origin)
+
+> **Private FastAPI service for the DHK Align Transliterator‑tion engine.**
+> Origin stays hidden behind Cloudflare; only the Worker may call it.
+
+[![FastAPI](https://img.shields.io/badge/FastAPI-≥0.111-009688.svg)](https://fastapi.tiangolo.com/) [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+
+This backend exposes the **secured API** used by DHK Align:
+- **Free** route serves **safety_level ≤ 1** entries.
+- **Pro** route (API key) serves **safety_level ≥ 2** packs (slang / profanity / dialect-sylheti).
+- Defense‑in‑depth middleware: schema checks, size caps, CORS, headers, IP+fingerprint rate‑limits, temp bans, and **HMAC‑signed audit logs**.
+
+> Note: This replaces the older “public analytics/feedback only” backend. This is the **active** secured API.
+
+---
+
+## 🚀 Run (local dev)
+
+```bash
+cd ~/Dev/dhkalign
+./scripts/run_server.sh
+# Health
+curl -s http://127.0.0.1:8090/health | jq .
+```
+
+**Venv**: `backend/.venv` (VS Code interpreter: `${workspaceFolder}/backend/.venv/bin/python`).
+
+---
+
+## 🔑 Environment (`backend/.env`)
+
+```ini
+CORS_ORIGINS=http://localhost:3000,https://dhkalign.com
+API_KEYS=<hex_or_comma_separated_hexes>   # keys allowed on /translate/pro
+AUDIT_HMAC_SECRET=<hex>                  # HMAC for append-only audit logs
+```
+
+The middleware auto‑loads `.env` (via `python-dotenv`), so no `--env-file` is needed in dev.
+
+---
+
+## 📡 Endpoints
+
+| Route               | Method | Auth           | Purpose                         |
+|---------------------|--------|----------------|----------------------------------|
+| `/health`           | GET    | none           | API status `{ ok, db, safe_rows }` |
+| `/translate`        | POST   | none           | Free tier (safety ≤ 1)           |
+| `/translate/pro`    | POST   | `x-api-key`    | Pro tier (safety ≥ 2) + packs    |
+
+### Request bodies
+**/translate** (Free)
+```json
+{ "text": "kemon acho", "src_lang": "banglish", "dst_lang": "english" }
+```
+
+**/translate/pro** (Pro)
+```json
+{ "text": "Bindaas", "pack": "slang" }
+```
+
+**Packs**: `slang`, `profanity`, `dialect-sylheti`
+
+**Errors**: `400` malformed JSON, `413` too large (>2KB), `415` wrong content-type, `401` missing/invalid API key, `429` rate‑limited.
+
+---
+
+## 🔒 Security Middleware (implemented)
+- Strict JSON schema (`text` required, ≤1000 chars)
+- Sanitization (strip SQL‑ish tokens, path traversal), **2KB** POST cap
+- CORS allowlist (from `CORS_ORIGINS`)
+- Security headers (HSTS, CSP, nosniff, frame‑deny, referrer)
+- IP + fingerprint (UA/Accept/Language) **rate‑limit** (60/min), temp bans after 5 bad
+- **API key** gate on `/translate/pro`
+- **HMAC‑signed audit logs** at `private/audit/security.jsonl` (events: `bad_request`, `rate_limited`, `auth_fail`, `cors_block`, `temp_ban_*`)
+
+Files:
+- `backend/security_middleware.py`
+- `backend/scripts/secure_log.py`
+
+---
+
+## 🗄️ Data Model & Scripts
+- SQLite DB at `backend/data/translations.db`
+- **Safety levels**: `≤ 1` free, `≥ 2` pro
+- **Packs**: `slang`, `profanity`, `dialect-sylheti`
+
+**Normalize/import packs**
+```bash
+# Normalize raw JSONL → CLEAN.jsonl (example: cultural safe pack)
+python3 backend/scripts/normalize_jsonl.py \
+  private/packs_raw/newstuff/dhk_align_cultural_pack_001.jsonl \
+  private/packs_raw/newstuff/dhk_align_cultural_pack_001.CLEAN.jsonl cultural 1
+
+# Import CLEAN → SQLite
+python3 backend/scripts/import_clean_jsonl.py \
+  private/packs_raw/newstuff/dhk_align_cultural_pack_001.CLEAN.jsonl
+```
+
+**Export safe client cache**
+```bash
+python3 backend/scripts/export_client_cache.py
+# writes frontend/src/data/dhk_align_client.json (safety ≤ 1 only)
+```
+
+---
+
+## 🔐 Deployment Notes (Keep Backend Hidden)
+- **Do not** expose this origin publicly.
+- Put a **Cloudflare Worker + KV** in front; only allow `/health`, `/translate`, `/translate/pro`.
+- Orange‑cloud DNS and keep the origin behind CF (or Tunnel). 
+- Do **not** commit `.env`, `backend/data/translations.db`, or anything under `private/` (already ignored via `.gitignore`).
+
+---
+
+## 🧭 Files of interest
+- `backend/app_sqlite.py` — FastAPI app (mounts pro router, health, translate)
+- `backend/pro_routes.py` — `/translate/pro` (API key, pack filter)
+- `backend/security_middleware.py` — validation, headers, rate‑limit, audit hooks
+- `scripts/run_server.sh` — start uvicorn with env + sane reload
+- `scripts/backup_db.sh` — nightly backup used by cron
+
+---
+
+## 🧪 Quick Tests (curl)
+```bash
+# Free (200)
+curl -s -X POST http://127.0.0.1:8090/translate -H "Content-Type: application/json" \
+  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | jq .
+
+# Pro (200) — requires API key
+KEY=$(grep '^API_KEYS=' backend/.env | cut -d= -f2)
+PHRASE=$(sed -n '1p' private/pro_packs/slang/dhk_align_slang_pack_002.CLEAN.jsonl | jq -r .banglish)
+curl -s -X POST http://127.0.0.1:8090/translate/pro \
+  -H "Content-Type: application/json" -H "x-api-key: $KEY" \
+  -d "{\"text\":\"$PHRASE\",\"pack\":\"slang\"}" | jq .
+```
+
+---
+
+## 📄 License / Contacts
+MIT — see `LICENSE`.
+
+Support — info@dhkalign.com  •  Admin/Security — admin@dhkalign.com (subject "SECURITY")

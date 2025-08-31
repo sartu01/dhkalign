@@ -10,7 +10,7 @@ At DHK Align, **privacy is not a feature, it's our foundation**. We built this s
 
 ### Privacy-First Principles
 
-1. **Local Processing**: All translations happen in your browser
+1. **Free‑first local processing**: Core transliteration runs in your browser. Free requests may call the private backend for availability/rate‑limit checks; content is not stored.
 2. **Minimal Collection**: We only collect what's absolutely necessary
 3. **User Control**: You decide what to share with us
 4. **Full Transparency**: Our code is open source and auditable
@@ -23,7 +23,6 @@ At DHK Align, **privacy is not a feature, it's our foundation**. We built this s
 ### What We DON'T Collect (By Default)
 
 - ❌ **Translation content**: Your text never leaves your device
-- ❌ **IP addresses**: Not logged or stored
 - ❌ **Device identifiers**: No fingerprinting
 - ❌ **Browser details**: No user agent logging
 - ❌ **Location data**: No geolocation tracking
@@ -34,8 +33,15 @@ At DHK Align, **privacy is not a feature, it's our foundation**. We built this s
 
 ### What We Collect (Minimal)
 
+#### Security Events (All Tiers)
+For abuse prevention and availability, the edge (Cloudflare Worker) and the private backend write **tamper‑evident security audit logs**:
+- **What**: event type (e.g., bad request, rate‑limited, auth fail), **IP address**, timestamp, route.
+- **What not**: **no translation text**, **no user identifiers**.
+- **Where**: local only, in `private/audit/security.jsonl` (HMAC‑signed, append‑only).
+- **Retention**: up to **90 days**, then rotated; kept offline unless needed for security investigations.
+
 #### Free Tier Users (Default)
-- **Nothing by default**: Zero data collection
+- **No translation content collected; security events as described above**
 - **Usage counter**: Stored locally in your browser only
 - **Preferences**: Theme and language settings (local storage)
 - **Cache**: Recent translations (for speed, stored locally)
@@ -124,6 +130,7 @@ If you submit feedback to improve translations:
   "last_active": "2024-01-27T15:45:00Z",
   "error_reports": []
 }
+// Security audit logs are separate, local-only, and contain no translation text.
 ```
 
 **What's NOT stored**:
@@ -141,6 +148,7 @@ If you submit feedback to improve translations:
 | **Emails** | AES-256 at rest | Rotating keys, separate key store |
 | **Database** | TLS 1.3 in transit, AES-256 at rest | Hardware security modules |
 | **Backups** | AES-256 with separate keys | Encrypted key storage |
+| **Security audit logs (HMAC)** | Local filesystem; integrity via HMAC | Secret in .env (AUDIT_HMAC_SECRET) |
 | **Local preferences** | AES encryption (optional) | Client-side key generation |
 
 ### Infrastructure Security
@@ -151,6 +159,7 @@ If you submit feedback to improve translations:
 - **Backups**: Encrypted, automated deletion schedules
 - **Networks**: Segmented, firewall-protected
 - **Error Reporting**: Disabled by default; if enabled, scrubbed of sensitive data
+- **Edge shield**: Cloudflare Worker restricts routes and rate‑limits before origin.
 
 ### Code Security
 
@@ -198,6 +207,7 @@ If you submit feedback to improve translations:
 | **Feedback data** | 5 years | Service improvement | Manual review possible |
 | **Analytics** | 90 days | Performance optimization | Automated deletion |
 | **Error logs** | 30 days | Debugging | Automated rotation |
+| **Security audit logs** | 90 days | Abuse prevention & forensics | Local rotation (append‑only JSONL) |
 
 ### Automated Deletion
 
@@ -488,7 +498,7 @@ DHK Align Privacy Team
 
 ## 📋 Privacy Summary
 
-**TL;DR**: We protect your privacy by not collecting your data. Translations happen in your browser. Pro users share minimal data for account management. We'll never sell your information.
+**TL;DR**: We protect your privacy by not collecting translation content. Transliteration runs in your browser; when the backend is used, it stores **no content**, only minimal security metadata (e.g., IP) for abuse prevention.
 
 ### Quick Facts
 - ✅ **Zero tracking** by default

@@ -1,7 +1,6 @@
+# DHK Align - Frontend (React, Transliterator-tion UI)
 
-# DHK Align - Frontend (React)
-
-*Privacy-first, culturally tuned Banglish ⇄ English translator UI. Runs 100% in-browser with offline-first design.*
+*Privacy-first, culturally tuned Banglish ⇄ English Transliterator-tion UI. Runs 100% in-browser with offline-first design.*
 
 **Repo:** [github.com/sartu01/dhkalign](https://github.com/sartu01/dhkalign)  
 **Support:** [info@dhkalign.com](mailto:info@dhkalign.com) • **Admin:** [admin@dhkalign.com](mailto:admin@dhkalign.com)
@@ -10,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![Bundle Size](https://img.shields.io/badge/bundle-~150KB-green.svg)](https://bundlephobia.com/)
 
-Privacy-first, culturally aware Banglish ⇄ English translator UI. Runs **entirely in-browser** for privacy and speed.
+Privacy-first, culturally aware Banglish ⇄ English Transliterator-tion UI. Runs **entirely in-browser** for privacy and speed. Connects to hidden backend for Pro API.
 
 ## 🚀 Quick Start
 
@@ -30,7 +29,7 @@ frontend/
 ├── public/
 │   └── index.html
 ├── src/
-│   ├── components/      # Translator UI
+│   ├── components/      # Transliterator-tion UI
 │   ├── utils/           # Engine, cache, logger
 │   ├── api/             # Optional backend hooks
 │   └── hooks/           # useTranslator
@@ -61,15 +60,15 @@ console.log(result.translation); // "how are you"
 
 | Component | Purpose | Props |
 |-----------|---------|-------|
-| `Translator.jsx` | Main translation interface | `onTranslate`, `maxLength` |
-| `TranslateResult.jsx` | Display translation output | `result`, `onFeedback` |
-| `ConfidenceIndicator.jsx` | Show translation confidence | `confidence`, `method` |
-| `ExampleButtons.jsx` | Quick example translations | `examples`, `onSelect` |
+| `Translator.jsx` | Main transliterator-tion interface | `onTranslate`, `maxLength` |
+| `TranslateResult.jsx` | Display transliterator-tion output | `result`, `onFeedback` |
+| `ConfidenceIndicator.jsx` | Show transliterator-tion confidence | `confidence`, `method` |
+| `ExampleButtons.jsx` | Quick example transliterator-tions | `examples`, `onSelect` |
 
 ### Example Usage
 
 ```javascript
-// Main Translator Component
+// Main Transliterator-tion Component
 import { useState } from 'react';
 import { useTranslation } from '../hooks/useTranslator';
 
@@ -501,7 +500,7 @@ self.addEventListener('fetch', (event) => {
 {
   "public/manifest.json": {
     "short_name": "DHK Align",
-    "name": "DHK Align - Banglish Translator",
+    "name": "DHK Align - Banglish Transliterator-tion",
     "icons": [
       {
         "src": "favicon.ico",
@@ -564,7 +563,7 @@ self.addEventListener('fetch', (event) => {
 ----
 
 <div align="center">
-  <p>Frontend documentation for DHK Align</p>
+  <p>Frontend documentation for DHK Align — the first Transliterator-tion engine.</p>
   <p>
     <a href="../README.md">← Back to main README</a> •
     <a href="mailto:info@dhkalign.com">Support</a> •

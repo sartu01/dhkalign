@@ -3,6 +3,7 @@
 # Security Policy
 
 *Last Updated: August 2025*
+**Origin privacy**: backend origin is private; Cloudflare Worker is the only ingress for client traffic.
 See also: **[Privacy Policy](./PRIVACY.md)** for data handling commitments.
 
 ## 📣 Reporting a Vulnerability
@@ -18,12 +19,27 @@ DHK Align implements a **defense-in-depth** security architecture with privacy a
 
 ### Core Security Principles
 
-1. **Client-Side First**: Core functionality requires no server communication
-2. **Data Minimization**: Collect only what's essential for the service
-3. **Zero Trust**: Never trust user input, always verify
-4. **Secure by Default**: Security features enabled out of the box
-5. **Transparent Security**: Open source for audibility
-6. **Client-side translations only**: The public backend never processes translation content
+1. **Free-first, server-minimized**: Free tier (safety ≤ 1) can be served from client cache; backend exists but is minimized for free requests.
+2. **Hidden backend**: All backend traffic flows only through the Cloudflare Worker; origin never accepts direct public traffic.
+3. **Zero trust inputs**: Validate, sanitize, cap; never trust user input or model output.
+4. **Least data / No PII**: No user identifiers stored; logs contain no raw text; redaction on any diagnostic previews.
+5. **Defense in depth**: Edge rate-limit + origin rate-limit, CORS allowlist, security headers, API-key gate, payload caps, temp bans.
+6. **Tamper‑evident operations**: HMAC‑signed append‑only audit logs and nightly backups with restore drills.
+
+### Hidden Backend & Edge Shield (Deployed Posture)
+
+- **Cloudflare Worker (edge)** sits in front of the origin; only these paths are forwarded: `/health`, `/translate`, `/translate/pro`.
+- **Origin** is private: DNS is orange‑clouded; if needed, Cloudflare Tunnel is used. No other ingress is allowed.
+- **Edge rate‑limit**: minute‑bucket per IP via KV; origin also rate‑limits (IP + fingerprint) at 60/min.
+- **API key** is required for `/translate/pro`; free `/translate` never serves `safety_level ≥ 2`.
+
+### Data Classification & Retention
+
+- **Safety levels**: `≤ 1` (safe/free), `≥ 2` (pro: slang, profanity, dialects).
+- **Free tier** returns only safety ≤ 1; **Pro tier** exposes ≥ 2 with `pack` filter.
+- **Logs**: HMAC‑signed JSONL at `private/audit/security.jsonl`; contain event type, IP, and metadata — **no raw user text**. Redaction helper is used for any necessary previews.
+- **Backups**: nightly SQLite backups to `private/backups/YYYY-MM-DD_translations.db`; restore drill documented.
+- **Retention**: audit logs and backups kept locally; off‑box copies only on explicit ops action.
 
 ## 🛡️ Threat Model
 
@@ -31,13 +47,13 @@ DHK Align implements a **defense-in-depth** security architecture with privacy a
 
 | Threat | Risk Level | Mitigation | Implementation |
 |--------|------------|------------|----------------|
-| **XSS Attacks** | High | Input sanitization, CSP headers | `sanitizer.js`, React escaping |
-| **CSRF Attacks** | Medium | SameSite cookies, origin checks, double-submit tokens (if cookies used) | Starlette middleware + custom dependency |
-| **Injection Attacks** | High | Parameterized queries, input validation | Pydantic models |
-| **DoS/DDoS** | Medium | Rate limiting, CDN protection | CloudFlare, rate limiting |
-| **Data Leakage** | High | Encryption, minimal logging | No PII in logs |
-| **Session Hijacking** | Medium | Secure cookies, short TTL (if cookies used) | Short‑lived tokens; no sessions by default |
-| **Man-in-the-Middle** | High | HTTPS enforcement, HSTS | TLS 1.3, security headers |
+| **XSS Attacks** | High | Input sanitization, CSP headers | React escaping; CSP; sanitizer in frontend; headers in middleware |
+| **CSRF Attacks** | Medium | SameSite cookies, origin checks, double-submit tokens (if cookies used) | Not applicable for tokenless JSON POST; CORS allowlist in middleware |
+| **Injection Attacks** | High | Parameterized queries, input validation | Pydantic validation; parameterized SQLite queries; sanitize in middleware |
+| **DoS/DDoS** | Medium | Rate limiting, CDN protection | Cloudflare Worker KV rate‑limit + origin rate‑limit (security_middleware.py) |
+| **Data Leakage** | High | Encryption, minimal logging | No PII in logs; HMAC audit (secure_log.py); safety gating |
+| **Session Hijacking** | Medium | Secure cookies, short TTL (if cookies used) | No session cookies by default; API key header on pro only |
+| **MitM** | High | HTTPS enforcement, HSTS | HTTPS (CF) + HSTS headers in middleware/edge |
 
 ### Out of Scope (v1)
 
@@ -82,7 +98,7 @@ export function sanitizeInput(text) {
                script-src 'self' https://js.stripe.com 'nonce-__NONCE__';
                style-src 'self' 'nonce-__NONCE__';
                img-src 'self' data: https:;
-               connect-src 'self' https://api.dhkalign.com;
+               connect-src 'self' https://dhkalign.com;
                frame-src https://js.stripe.com;
                object-src 'none';
                base-uri 'self';">
@@ -162,6 +178,8 @@ export const storage = {
 > Do not store secrets or raw user text in browser storage. Encryption with hardcoded keys (e.g., fallbacks) is prohibited.
 
 ### Backend Security
+
+**Reality note**: The backend is not publicly reachable. All examples assume calls arrive via the Cloudflare Worker. Direct origin access is disabled in production.
 
 #### Rate Limiting
 
