@@ -503,3 +503,152 @@ graph TB
     <a href="PRIVACY.md">Privacy →</a>
   </p>
 </div>
+# DHK Align – Architecture Overview (Repo Truth)
+
+*Last Updated: September 2025*
+
+## 🏗️ High‑Level Design
+
+**Open‑core, security‑first transliterator‑tion.**
+- **Frontend (React SPA)** handles free tier locally (safety ≤ 1) with an in‑browser cache.
+- **Edge (Cloudflare Worker)** is the *only* ingress in prod and dev. It enforces the edge shield, provides a KV cache and per‑key usage logs, and exposes `/edge/health` and `/admin/*` (key‑gated) aggregations.
+- **Backend (FastAPI, private origin)** serves `/translate` and `/translate/pro` behind the edge shield, runs validation/security middleware, and has a lightweight in‑process TTL response cache.
+
+### Components (current)
+
+- **Frontend (React PWA)**
+  - Free tier only; client cache for safety ≤ 1
+  - Calls **Worker** (`http://127.0.0.1:8788` in dev) — never calls origin directly
+- **Edge Worker (Cloudflare)**
+  - KV: `CACHE` (response TTL), `USAGE` (per‑API‑key daily metering)
+  - Headers: `CF-Cache-Edge: HIT|MISS`
+  - Routes: `/edge/health`, `/admin/health`, `/admin/cache_stats`, `/translate*`
+  - Security: injects `x-edge-shield: $EDGE_SHIELD_TOKEN`
+- **Backend (FastAPI, private)**
+  - Routes: `/health`, `/translate`, `/translate/pro`, `/admin/cache_stats`
+  - Security middleware: schema/size caps, sanitization, CORS, headers, IP+fingerprint limits, temp bans, API‑key gate on pro
+  - Backend TTL cache (headers: `X-Backend-Cache: HIT|MISS`)
+  - HMAC‑signed audit log (`private/audit/security.jsonl`)
+
+---
+
+## 🔀 Data Flow (Edge‑Shielded)
+
+```mermaid
+sequenceDiagram
+  participant U as User (Browser)
+  participant F as Frontend (React)
+  participant W as Edge Worker (CF)
+  participant B as Backend (FastAPI, private)
+  participant K as KV (CACHE/USAGE)
+
+  U->>F: Type Banglish text
+  F->>W: POST /translate (x-api-key?)
+  W->>K: KV get (CACHE)
+  alt KV HIT
+    K-->>W: Cached response
+    W-->>F: 200 (CF-Cache-Edge: HIT)
+  else KV MISS
+    W->>B: Forward with x-edge-shield
+    B->>B: Validate, rate‑limit, TTL cache
+    B-->>W: 200 JSON
+    W->>K: KV put (TTL)
+    W->>K: Increment usage (USAGE)
+    W-->>F: 200 (CF-Cache-Edge: MISS)
+  end
+```
+
+**Notes**
+- Frontend never contacts the origin directly.
+- `?cache=no` bypasses edge KV (useful for testing backend TTL cache).
+- Admin paths are reachable via the Worker only (`x-admin-key` at edge, shield at origin).
+
+---
+
+## 🧩 Repo Structure (live)
+
+```
+dhkalign/
+├─ frontend/                      # React SPA (free tier UI)
+│  └─ src/data/dhk_align_client.json   # generated safe cache (≤ 1)
+├─ infra/edge/                    # Cloudflare Worker (edge shield)
+│  ├─ src/index.js                # shield + KV cache + usage + admin
+│  └─ wrangler.toml               # KV bindings + vars (dev origin 8090)
+├─ backend/                       # FastAPI (private origin)
+│  ├─ app_sqlite.py               # app + routes (/translate, /pro, /admin)
+│  ├─ middleware_cache.py         # TTL response cache (X-Backend-Cache)
+│  ├─ security_middleware.py      # validation, headers, RL, audit hooks
+│  ├─ scripts/ (normalize/import/export_client_cache)
+│  └─ data/translations.db        # local SQLite (ignored in Git)
+├─ private/                       # 🔒 proprietary data/logs (ignored)
+│  ├─ pro_packs/                  # premium datasets (≥ 2)
+│  ├─ audit/security.jsonl        # HMAC append-only audit log
+│  └─ backups/YYYY-MM-DD_translations.db
+└─ docs/                          # public docs
+   ├─ SECURITY.md  PRIVACY.md  SECURITY_RUNBOOK.md
+   └─ NEXT_TODO.md  ARCHITECTURE.md (this file)
+```
+
+---
+
+## 🔐 Security Model
+
+| Layer | Control | What it does |
+|------|---------|---------------|
+| **Edge Shield** | Secret header `x-edge-shield` | Only the Worker can reach private origin in prod/dev |
+| **Pro Gate** | `x-api-key` at edge + origin | Restricts `/translate/pro` |
+| **KV Cache** | TTL cache of successful `/translate*` | `CF-Cache-Edge: HIT|MISS` |
+| **Backend TTL** | In‑process cache for `/translate*` | `X-Backend-Cache: HIT|MISS` (when bypassing edge) |
+| **Rate Limits** | IP + fingerprint | Temp bans for abuse |
+| **Audit** | HMAC‑signed JSONL | Tamper‑evident security events |
+
+**Retention**
+- Audit logs: 90 days
+- KV usage metering: ~40h rolling TTL (edge), exported to private store as needed
+
+---
+
+## ⚙️ Environments & Ports (dev)
+
+- **Backend origin**: `http://127.0.0.1:8090`
+- **Edge Worker**: `http://127.0.0.1:8788` (8787 also used)
+- **Frontend**: `http://localhost:3000`
+
+Set in `infra/edge/wrangler.toml`:
+```toml
+[vars]
+ORIGIN_BASE_URL = "http://127.0.0.1:8090"
+CACHE_TTL_SECONDS = "300"
+REQUIRE_API_KEY = "false"   # true in prod
+DEFAULT_API_KEY = "dev"
+```
+
+Edge secrets (stored via Wrangler, not in Git): `EDGE_SHIELD_TOKEN`, `ADMIN_KEY`.
+
+Origin env (Server tab): `EDGE_SHIELD_TOKEN`, `EDGE_SHIELD_ENFORCE=1`, optional `BACKEND_CACHE_TTL`.
+
+---
+
+## 🧪 Observability & Admin
+
+- **Edge**: `/edge/health`, `/admin/health` (aggregates origin `/health`), `/admin/cache_stats`
+- **Headers**: `CF-Cache-Edge`, `X-Backend-Cache`
+- **Logs**: `private/audit/security.jsonl` (HMAC), Worker usage KV (`usage:{key}:{YYYY-MM-DD}`)
+
+---
+
+## 🚀 Deployment (prod)
+
+- DNS (orange‑cloud) to route public traffic through Cloudflare.
+- Bind Worker routes to `api.dhkalign.com/*` or similar.
+- Keep origin private (allowlist Cloudflare/Tunnel only).
+- Turn on `REQUIRE_API_KEY=true` and distribute keys; revoke via KV/DB.
+
+---
+
+## 📌 Differences vs older doc
+
+- Backend is **not optional** for Pro; it is private and sits behind the edge shield.
+- Frontend no longer talks to origin; it talks to the Worker.
+- Analytics/feedback‑only model replaced with **translate endpoints** and **admin** surfaces.
+- Added **two‑layer cache** (edge KV + backend TTL) and **usage metering**.

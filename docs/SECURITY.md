@@ -2,7 +2,7 @@
 
 # Security Policy
 
-*Last Updated: August 2025*
+*Last Updated: September 2025*
 **Origin privacy**: backend origin is private; Cloudflare Worker is the only ingress for client traffic.
 See also: **[Privacy Policy](./PRIVACY.md)** for data handling commitments.
 
@@ -19,27 +19,36 @@ DHK Align implements a **defense-in-depth** security architecture with privacy a
 
 ### Core Security Principles
 
-1. **Free-first, server-minimized**: Free tier (safety ≤ 1) can be served from client cache; backend exists but is minimized for free requests.
+1. **Free-first, local-first**: Free tier (safety ≤ 1) runs from client cache/in-browser; backend is minimized for free.
 2. **Hidden backend**: All backend traffic flows only through the Cloudflare Worker; origin never accepts direct public traffic.
 3. **Zero trust inputs**: Validate, sanitize, cap; never trust user input or model output.
 4. **Least data / No PII**: No user identifiers stored; logs contain no raw text; redaction on any diagnostic previews.
-5. **Defense in depth**: Edge rate-limit + origin rate-limit, CORS allowlist, security headers, API-key gate, payload caps, temp bans.
+5. **Defense in depth**: Edge rate-limit + origin rate-limit, CORS allowlist, security headers, API-key gate, payload caps, temp bans, KV/TTL caches.
 6. **Tamper‑evident operations**: HMAC‑signed append‑only audit logs and nightly backups with restore drills.
 
 ### Hidden Backend & Edge Shield (Deployed Posture)
 
-- **Cloudflare Worker (edge)** sits in front of the origin; only these paths are forwarded: `/health`, `/translate`, `/translate/pro`.
+- **Cloudflare Worker (edge)** sits in front of the origin; only these paths are forwarded:
+  - "/health" (origin health)
+  - "/translate", "/translate/pro" (API)
+  - "/admin/health", "/admin/cache_stats" (admin surfaces, key-gated at edge)
 - **Origin** is private: DNS is orange‑clouded; if needed, Cloudflare Tunnel is used. No other ingress is allowed.
-- **Edge rate‑limit**: minute‑bucket per IP via KV; origin also rate‑limits (IP + fingerprint) at 60/min.
+- **Edge cache / usage** (KV bindings):
+  - `CACHE` — TTL response cache for `/translate*` (header: `CF-Cache-Edge: HIT|MISS`)
+  - `USAGE` — per-API-key daily counters (rolling ~40h TTL)
+- **KV-backed edge rate‑limit**: minute‑bucket per IP via KV; origin also rate‑limits (IP + fingerprint) at 60/min.
 - **API key** is required for `/translate/pro`; free `/translate` never serves `safety_level ≥ 2`.
+- **Backend TTL cache**: In‑process cache adds `X-Backend-Cache: HIT|MISS` when edge cache is bypassed with `?cache=no`.
 
 ### Data Classification & Retention
 
 - **Safety levels**: `≤ 1` (safe/free), `≥ 2` (pro: slang, profanity, dialects).
 - **Free tier** returns only safety ≤ 1; **Pro tier** exposes ≥ 2 with `pack` filter.
 - **Logs**: HMAC‑signed JSONL at `private/audit/security.jsonl`; contain event type, IP, and metadata — **no raw user text**. Redaction helper is used for any necessary previews.
+- **Edge KV cache**: response bodies cached briefly (default 5 minutes) for `/translate*`; bypass with `?cache=no`.
+- **KV usage metering**: counters stored as `usage:{key}:{YYYY-MM-DD}` with ~40h rolling TTL; exported to private store if billing is enabled.
 - **Backups**: nightly SQLite backups to `private/backups/YYYY-MM-DD_translations.db`; restore drill documented.
-- **Retention**: audit logs and backups kept locally; off‑box copies only on explicit ops action.
+- **Retention**: audit logs and backups kept locally; off‑box copies only on explicit ops action. Edge KV is not used for audit logs.
 
 ## 🛡️ Threat Model
 
@@ -330,7 +339,7 @@ server {
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
     
     # Content Security Policy
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://js.stripe.com 'nonce-__NONCE__'; style-src 'self' 'nonce-__NONCE__'; img-src 'self' data: https:; connect-src 'self' https://api.dhkalign.com; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://js.stripe.com 'nonce-__NONCE__'; style-src 'self' 'nonce-__NONCE__'; img-src 'self' data: https:; connect-src 'self' https://dhkalign.com https://api.dhkalign.com; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'" always;
     
     location / {
         proxy_pass http://127.0.0.1:3000;

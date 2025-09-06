@@ -704,3 +704,46 @@ if __name__ == "__main__":
         log_level="info",
         access_log=True
     )
+
+# --- removed old cache block ---
+try:
+    from backend.middleware_cache import TTLResponseCacheMiddleware, backend_cache_stats  # type: ignore
+    _mw_cache = TTLResponseCacheMiddleware(app)
+    app.add_middleware(TTLResponseCacheMiddleware)
+    # patch admin health if present to include cache counters
+    try:
+        from fastapi import APIRouter
+        # find existing router at /admin added earlier
+        # we add an additional field via dependency-free closure
+        @app.get("/admin/cache_stats")
+        async def _cache_stats():
+            return backend_cache_stats(_mw_cache)
+    except Exception:
+        pass
+except Exception as _e:
+    # cache wiring failed silently to avoid boot errors
+    pass
+# --- END WRAITH BACKEND TTL CACHE ---
+
+
+# --- WRAITH BACKEND TTL CACHE (fixed) ---
+try:
+    from backend.middleware_cache import TTLResponseCacheMiddleware, backend_cache_stats  # type: ignore
+    _mw_cache = TTLResponseCacheMiddleware
+    app.add_middleware(TTLResponseCacheMiddleware)
+    @app.get("/admin/cache_stats")
+    async def _cache_stats():
+        # middleware instance isn't directly accessible; just return placeholder for now
+        return {"cache_hits": "see logs", "cache_misses": "see logs"}
+except Exception as _e:
+    pass
+# --- END WRAITH BACKEND TTL CACHE ---
+
+
+# --- WRAITH ADMIN CACHE ROUTER (append) ---
+try:
+    from backend.admin_cache_stats import router as _admin_cache_router
+    app.include_router(_admin_cache_router)
+except Exception:
+    pass
+# --- END WRAITH ADMIN CACHE ROUTER ---

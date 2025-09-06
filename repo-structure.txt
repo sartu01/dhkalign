@@ -2016,3 +2016,51 @@
 └── wraith.sh
 
 1889 directories, 127 files
+
+DHK Align — Repo Structure (clean view)
+
+(Noise omitted: node_modules/, .venv/, .DS_Store, _backup/, build artifacts)
+
+.
+├── backend/                      # FastAPI (private origin)
+│   ├── app_sqlite.py             # app + routes (/translate, /translate/pro, /admin/*)
+│   ├── middleware_cache.py       # in-process TTL cache (X-Backend-Cache)
+│   ├── security_middleware.py    # validation, headers, rate-limits, audit hooks
+│   ├── scripts/                  # normalize/import/export_client_cache, secure_log
+│   ├── data/                     # SQLite DBs (ignored in git)
+│   ├── requirements.txt
+│   └── README.md
+├── frontend/                     # React SPA (free tier UI)
+│   ├── public/
+│   └── src/                      # components, hooks, utils, api
+├── infra/edge/                   # Cloudflare Worker (edge shield)
+│   ├── src/index.js              # shield + KV cache + usage + admin
+│   └── wrangler.toml             # KV bindings (CACHE, USAGE) + vars
+├── private/                      # 🔒 proprietary data (ignored)
+│   ├── pro_packs/                # premium packs (safety ≥ 2)
+│   ├── audit/security.jsonl      # HMAC append-only audit log
+│   └── backups/YYYY-MM-DD_translations.db
+├── docs/                         # public docs
+│   ├── ARCHITECTURE.md
+│   ├── SECURITY.md
+│   ├── SECURITY_RUNBOOK.md
+│   ├── PRIVACY.md
+│   ├── EXECUTION_DELIVERABLES.md
+│   ├── CONTRIBUTING.md
+│   └── NEXT_TODO.md
+├── scripts/                      # ops scripts
+│   ├── backup_db.sh
+│   ├── restore.sh
+│   └── repo_safety_check.sh
+├── tests/                        # unit/integration tests
+│   └── smoke.test.js
+├── e2e/                          # end-to-end tests
+│   └── smoke.spec.ts
+├── README.md                     # public stub (private README lives in private/docs)
+└── repo-structure.txt            # this file (clean view)
+
+# Notes
+# - Frontend calls the Worker (dev: 8787/8788), never the origin directly.
+# - Worker forwards to backend with x-edge-shield; KV CACHE/USAGE bound via wrangler.toml.
+# - Backend enforces EDGE_SHIELD_ENFORCE=1; /admin/* requires edge + admin key.
+# - Private assets, DBs, logs, and pro packs are ignored by git per .gitignore.

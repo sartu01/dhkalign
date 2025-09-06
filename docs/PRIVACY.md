@@ -1,6 +1,6 @@
 # Privacy Policy
 
-*Last Updated: August 2025*
+*Last Updated: September 2025*
 *This policy explains exactly what data we (don’t) collect, why, and how you stay in control.*
 See also: **[Security Policy](./SECURITY.md)** for threat model and infrastructure controls.
 
@@ -8,22 +8,25 @@ See also: **[Security Policy](./SECURITY.md)** for threat model and infrastructu
 
 At DHK Align, **privacy is not a feature, it's our foundation**. We built this service specifically for users who value their privacy above convenience.
 
+> **Note:** When you use DHK Align from certain regions, your requests may be processed on an edge server (such as a Cloudflare Worker) for speed and availability. Edge processing follows the same privacy guarantees: transliteration content is not stored, only minimal, short-lived metadata (e.g., rate-limit counters) may be cached briefly at the edge for performance and abuse prevention. No content or identifiers are persisted in edge storage.
+
 ### Privacy-First Principles
 
-1. **Free‑first local processing**: Core transliteration runs in your browser. Free requests may call the private backend for availability/rate‑limit checks; content is not stored.
+1. **Free‑first local processing**: Core transliteration runs in your browser. Free-tier users' text is processed locally whenever possible. Free requests may call the private backend or edge for availability/rate‑limit checks, but transliteration content is never stored or persisted.
 2. **Minimal Collection**: We only collect what's absolutely necessary
 3. **User Control**: You decide what to share with us
 4. **Full Transparency**: Our code is open source and auditable
 5. **No Surveillance**: We don't track or profile users
 6. **No Data Sales**: We'll never sell your data to anyone
 7. **Right to Forget**: Full delete-on-demand capability
+8. **Short-lived edge cache**: Any edge cache (for rate-limiting or availability) is short-lived and contains no transliteration content or user identifiers.
 
 ## 📊 Information We Collect
 
 ### What We DON'T Collect (By Default)
 
-- ❌ **Translation content**: Your text never leaves your device
-- ❌ **Device identifiers**: No fingerprinting
+- ❌ **Transliteration content**: Your text never leaves your device (for free users; pro users also protected—see below)
+- ❌ **Persistent device identifiers**: No fingerprinting, no unique device IDs stored
 - ❌ **Browser details**: No user agent logging
 - ❌ **Location data**: No geolocation tracking
 - ❌ **Third-party cookies**: No advertising trackers
@@ -35,10 +38,11 @@ At DHK Align, **privacy is not a feature, it's our foundation**. We built this s
 
 #### Security Events (All Tiers)
 For abuse prevention and availability, the edge (Cloudflare Worker) and the private backend write **tamper‑evident security audit logs**:
-- **What**: event type (e.g., bad request, rate‑limited, auth fail), **IP address**, timestamp, route.
+- **What**: event type (e.g., bad request, rate‑limited, auth fail), **IP address**, timestamp, and route accessed (not content).
 - **What not**: **no translation text**, **no user identifiers**.
 - **Where**: local only, in `private/audit/security.jsonl` (HMAC‑signed, append‑only).
 - **Retention**: up to **90 days**, then rotated; kept offline unless needed for security investigations.
+- **Note**: Edge KV (key-value) storage is **not** used for audit logs or persistent event storage; logs are kept local and short-lived.
 
 #### Free Tier Users (Default)
 - **No translation content collected; security events as described above**
@@ -46,6 +50,7 @@ For abuse prevention and availability, the edge (Cloudflare Worker) and the priv
 - **Preferences**: Theme and language settings (local storage)
 - **Cache**: Recent translations (for speed, stored locally)
 - **Error logs**: Only in your browser console, never uploaded
+- **Edge cache**: No translation content or user identifiers are stored in edge cache; only short-lived counters for rate limiting.
 
 #### Pro/Lifetime Users (Optional Account)
 If you choose to create an account for Pro features:
@@ -57,6 +62,9 @@ If you choose to create an account for Pro features:
 | **Subscription status** | Feature access control | Internal database | While active + 30 days |
 | **Account creation date** | Security and analytics | Internal database | While active + 30 days |
 | **Last login timestamp** | Security monitoring | Internal database | While active + 30 days |
+| **API key (if used)** | Authenticate API requests | Encrypted database | While active + 30 days |
+
+**Note:** Input text for transliteration is **not stored** on the server—neither as history nor in logs.
 
 #### Optional Analytics (Disabled by Default)
 Analytics are **off by default** and require explicit opt-in in Settings. We do not use any third-party analytics.
@@ -64,8 +72,8 @@ If you explicitly enable analytics in settings:
 
 | Data Type | Purpose | Processing | Retention |
 |-----------|---------|------------|-----------|
-| **Translation method used** | Improve engine performance | Anonymous aggregation | 90 days |
-| **Translation confidence score** | Quality improvement | Statistical analysis | 90 days |
+| **Transliterator-tion method used** | Improve engine performance | Anonymous aggregation | 90 days |
+| **Transliterator-tion confidence score** | Quality improvement | Statistical analysis | 90 days |
 | **Processing time** | Performance optimization | Anonymous metrics | 90 days |
 | **Success/failure rate** | Error reduction | Anonymous statistics | 90 days |
 
@@ -95,7 +103,7 @@ If you submit feedback to improve translations:
   },
   "dhk_align_cache": {
     "kemon_acho": {
-      "translation": "how are you",
+      "transliterator_tion": "how are you",
       "timestamp": 1641234567890,
       "confidence": 1.0
     }
@@ -129,8 +137,10 @@ If you submit feedback to improve translations:
   "created_at": "2024-01-27T10:30:00Z",
   "last_active": "2024-01-27T15:45:00Z",
   "error_reports": []
+  ,"stores_text": false
 }
-// Security audit logs are separate, local-only, and contain no translation text.
+// Security audit logs are separate, local-only, and contain no transliteration text.
+// Note: "stores_text": false means no transliteration input or output is stored on the server.
 ```
 
 **What's NOT stored**:
@@ -159,7 +169,7 @@ If you submit feedback to improve translations:
 - **Backups**: Encrypted, automated deletion schedules
 - **Networks**: Segmented, firewall-protected
 - **Error Reporting**: Disabled by default; if enabled, scrubbed of sensitive data
-- **Edge shield**: Cloudflare Worker restricts routes and rate‑limits before origin.
+- **Edge shield**: Cloudflare Worker restricts routes and rate‑limits before origin. Edge cache is short-lived and contains no transliteration content.
 
 ### Code Security
 
@@ -208,6 +218,8 @@ If you submit feedback to improve translations:
 | **Analytics** | 90 days | Performance optimization | Automated deletion |
 | **Error logs** | 30 days | Debugging | Automated rotation |
 | **Security audit logs** | 90 days | Abuse prevention & forensics | Local rotation (append‑only JSONL) |
+| **Edge KV cache** | < 24 hours | Rate-limiting, availability | Automatic expiry (no content stored) |
+| **Usage metering** | Session/local only | Rate limiting | Browser/edge cleanup |
 
 ### Automated Deletion
 
@@ -310,7 +322,7 @@ Account Settings → Privacy → Manage My Data
 
 We use browser localStorage and sessionStorage for:
 - User preferences (theme, language)
-- Translation cache (performance)
+ - Transliterator-tion cache (performance)
 - Daily usage counter (rate limiting)
 
 **Your control**: Clear anytime via browser settings.
@@ -498,11 +510,11 @@ DHK Align Privacy Team
 
 ## 📋 Privacy Summary
 
-**TL;DR**: We protect your privacy by not collecting translation content. Transliteration runs in your browser; when the backend is used, it stores **no content**, only minimal security metadata (e.g., IP) for abuse prevention.
+**TL;DR**: We protect your privacy by not collecting transliteration content. Transliterator-tion runs in your browser; when the backend or edge is used, it stores **no content**, only minimal security metadata (e.g., IP) for abuse prevention.
 
 ### Quick Facts
 - ✅ **Zero tracking** by default
-- ✅ **Client-side translation** engine
+- ✅ **Client-side transliterator-tion** engine
 - ✅ **Open source** code
 - ✅ **Minimal data** collection
 - ✅ **Strong encryption** when needed

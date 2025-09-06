@@ -9,11 +9,11 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![Bundle Size](https://img.shields.io/badge/bundle-~150KB-green.svg)](https://bundlephobia.com/)
 
-Privacy-first, culturally aware Banglish ⇄ English Transliterator-tion UI. Runs **entirely in-browser** for privacy and speed. Connects to hidden backend for Pro API.
+Runs entirely in-browser for privacy and speed. Connects to the hidden backend via the edge Worker for Pro API calls.
 
 ## 🚀 Quick Start
 
-Development server defaults to http://localhost:3000 — no backend required.
+Development server defaults to http://localhost:3000 — connects to the edge Worker on port 8787/8788, not directly to backend.
 
 ```bash
 npm install
@@ -44,6 +44,9 @@ frontend/
 - Contextual + n-gram parsing
 - Weighted word-by-word fallback
 
+**Free tier:** works offline with client cache (safety ≤1)  
+**Pro tier:** requires API key and Worker call (safety ≥2)
+
 ### Usage
 
 ```javascript
@@ -51,7 +54,7 @@ import { useTranslation } from '../hooks/useTranslator';
 
 const { translate } = useTranslation();
 const result = translate("kemon acho");
-console.log(result.translation); // "how are you"
+console.log(result.transliterator-tion); // "how are you"
 ```
 
 ## 🎨 Components
@@ -60,7 +63,7 @@ console.log(result.translation); // "how are you"
 
 | Component | Purpose | Props |
 |-----------|---------|-------|
-| `Translator.jsx` | Main transliterator-tion interface | `onTranslate`, `maxLength` |
+| `Translator.jsx` | Main transliterator-tion interface | `onTransliterator-tion`, `maxLength` |
 | `TranslateResult.jsx` | Display transliterator-tion output | `result`, `onFeedback` |
 | `ConfidenceIndicator.jsx` | Show transliterator-tion confidence | `confidence`, `method` |
 | `ExampleButtons.jsx` | Quick example transliterator-tions | `examples`, `onSelect` |
@@ -77,9 +80,9 @@ export function Translator() {
   const [input, setInput] = useState('');
   const [result, setResult] = useState(null);
 
-  const handleTranslate = async () => {
-    const translation = await translate(input);
-    setResult(translation);
+  const handleTransliterator-tion = async () => {
+    const transliterator-tion = await translate(input);
+    setResult(transliterator-tion);
   };
 
   return (
@@ -90,12 +93,12 @@ export function Translator() {
         placeholder="Enter Banglish text..."
         maxLength={200}
       />
-      <button onClick={handleTranslate} disabled={isTranslating}>
-        Translate
+      <button onClick={handleTransliterator-tion} disabled={isTranslating}>
+        Transliterator-tion
       </button>
       {result && (
         <TranslateResult 
-          translation={result.translation}
+          transliterator-tion={result.transliterator-tion}
           confidence={result.confidence}
           method={result.method}
         />
@@ -105,7 +108,7 @@ export function Translator() {
 }
 ```
 
-## 🔧 Translation Engine
+## 🔧 Transliterator-tion Engine
 
 ### 8-Layer Fallback System
 
@@ -113,7 +116,7 @@ export function Translator() {
 // src/utils/translation-engine.js
 class TranslationEngine {
   constructor(data = clientData, config = {}) {
-    this.translations = data.t || {};
+    this.transliterator-tions = data.t || {};
     this.slangMap = this.buildSlangMap();
     this.patterns = this.buildPatterns();
     this.ngramIndex = this.buildNgramIndex();
@@ -152,10 +155,10 @@ class TranslationEngine {
 
   // Exact phrase matching
   exactMatch(input) {
-    const translation = this.translations[input];
-    if (translation) {
+    const transliterator-tion = this.transliterator-tions[input];
+    if (transliterator-tion) {
       return {
-        translation,
+        transliterator-tion,
         confidence: 1.0,
         method: 'exact',
         cached: false
@@ -170,12 +173,12 @@ class TranslationEngine {
     let bestMatch = null;
     let bestScore = 0;
 
-    for (const [phrase, translation] of Object.entries(this.translations)) {
+    for (const [phrase, transliterator-tion] of Object.entries(this.transliterator-tions)) {
       const similarity = this.calculateSimilarity(input, phrase);
       if (similarity >= threshold && similarity > bestScore) {
         bestScore = similarity;
         bestMatch = {
-          translation,
+          transliterator-tion,
           confidence: similarity,
           method: 'fuzzy',
           cached: false
@@ -200,7 +203,7 @@ export function useTranslation() {
   const [engine] = useState(() => new TranslationEngine(translationData));
   const [isTranslating, setIsTranslating] = useState(false);
   const [stats, setStats] = useState({
-    totalTranslations: 0,
+    totalTransliterator-tions: 0,
     cacheHits: 0,
     averageConfidence: 0
   });
@@ -218,13 +221,13 @@ export function useTranslation() {
       // Update statistics
       setStats(prev => ({
         ...prev,
-        totalTranslations: prev.totalTranslations + 1,
+        totalTransliterator-tions: prev.totalTransliterator-tions + 1,
         cacheHits: prev.cacheHits + (result?.cached ? 1 : 0)
       }));
 
       // Log performance (if enabled)
       if (duration > 50) {
-        console.warn(`Slow translation: ${duration}ms`);
+        console.warn(`Slow transliterator-tion: ${duration}ms`);
       }
 
       return result;
@@ -247,7 +250,7 @@ export function useTranslation() {
 
 ```bash
 # .env.example
-REACT_APP_API_BASE_URL=http://localhost:8000
+REACT_APP_API_BASE_URL=http://127.0.0.1:8788
 REACT_APP_LOG_LEVEL=info
 REACT_APP_CACHE_TTL=300000
 REACT_APP_MAX_INPUT_LENGTH=200
@@ -359,9 +362,9 @@ describe('TranslationEngine', () => {
   });
 
   describe('Exact Match', () => {
-    it('should translate exact phrases', () => {
+    it('should transliterator-tion exact phrases', () => {
       const result = engine.translate('kemon acho');
-      expect(result.translation).toBe('how are you');
+      expect(result.transliterator-tion).toBe('how are you');
       expect(result.confidence).toBe(1.0);
       expect(result.method).toBe('exact');
     });
@@ -370,7 +373,7 @@ describe('TranslationEngine', () => {
   describe('Fuzzy Match', () => {
     it('should handle typos', () => {
       const result = engine.translate('kemon aco');
-      expect(result.translation).toBe('how are you');
+      expect(result.transliterator-tion).toBe('how are you');
       expect(result.confidence).toBeGreaterThan(0.8);
       expect(result.method).toBe('fuzzy');
     });
@@ -379,7 +382,7 @@ describe('TranslationEngine', () => {
   describe('Compound Words', () => {
     it('should handle compound words', () => {
       const result = engine.translate('ekhonei');
-      expect(result.translation).toBe('right now');
+      expect(result.transliterator-tion).toBe('right now');
       expect(result.method).toBe('compound');
     });
   });
@@ -418,9 +421,9 @@ module.exports = {
           name: 'vendors',
           chunks: 'all',
         },
-        translations: {
+        transliterator-tions: {
           test: /dhk_align_data_client\.json$/,
-          name: 'translations',
+          name: 'transliterator-tions',
           chunks: 'all',
         },
       },
@@ -436,20 +439,20 @@ module.exports = {
 ```javascript
 // src/utils/performance.js
 export class PerformanceMonitor {
-  static measureTranslation(fn) {
+  static measureTransliterator-tion(fn) {
     return async (...args) => {
       const start = performance.now();
       const result = await fn(...args);
       const duration = performance.now() - start;
       
-      // Log slow translations
+      // Log slow transliterator-tions
       if (duration > 100) {
-        console.warn(`Slow translation: ${duration}ms`);
+        console.warn(`Slow transliterator-tion: ${duration}ms`);
       }
       
       // Track in analytics (if enabled)
       if (window.analytics?.track) {
-        window.analytics.track('Translation Performance', {
+        window.analytics.track('Transliterator-tion Performance', {
           duration,
           method: result?.method,
           confidence: result?.confidence

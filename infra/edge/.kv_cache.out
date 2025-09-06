@@ -1,0 +1,11 @@
+
+ ⛅️ wrangler 4.34.0
+───────────────────
+Resource location: remote
+🌀 Creating namespace with title "dhkalign-CACHE"
+✨ Success!
+To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
+[[kv_namespaces]]
+binding = "dhkalign_CACHE"
+id = "97e93c549954436f8370f6e7894ad6ef"
+

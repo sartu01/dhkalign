@@ -887,3 +887,193 @@ curl -s -X POST http://127.0.0.1:8090/translate/pro \
 MIT — see `LICENSE`.
 
 Support — info@dhkalign.com  •  Admin/Security — admin@dhkalign.com (subject "SECURITY")
+# DHK Align — Backend (FastAPI, Private Origin)
+
+> Private FastAPI service for the DHK Align Transliterator-tion engine. Origin stays hidden behind Cloudflare. Only the Worker may call it.
+
+[![FastAPI](https://img.shields.io/badge/FastAPI-%E2%89%A50.111-009688.svg)](https://fastapi.tiangolo.com/) [![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
+
+This backend is the secured API used by DHK Align.
+
+- Free route serves safety_level ≤ 1 entries
+- Pro route (API key) serves safety_level ≥ 2 packs (slang, profanity, dialect-sylheti)
+- Defense in depth middleware: schema checks, size caps, CORS, headers, IP+fingerprint rate limits, temp bans, HMAC-signed audit logs
+- Backend TTL cache middleware adds X-Backend-Cache headers
+- Admin cache stats are exposed at /admin/cache_stats
+
+---
+
+## Run (local dev)
+
+Two-tab discipline:
+
+**Server tab**
+```bash
+cd ~/Dev/dhkalign
+export EDGE_SHIELD_TOKEN="$(cat .secrets/EDGE_SHIELD_TOKEN)"
+export EDGE_SHIELD_ENFORCE=1
+./scripts/run_server.sh   # uvicorn on http://127.0.0.1:8090
+```
+
+**Work tab (edge Worker)**
+Run the Worker from infra/edge as documented in infra/edge/README or the main README. In dev we typically use http://127.0.0.1:8787 or 8788.
+
+**Quick health**
+```bash
+curl -s http://127.0.0.1:8090/health | jq .
+```
+
+Venv for editors: `backend/.venv` (VS Code interpreter `${workspaceFolder}/backend/.venv/bin/python`).
+
+---
+
+## Environment
+
+Create `backend/.env`:
+
+```ini
+CORS_ORIGINS=http://localhost:3000,https://dhkalign.com
+API_KEYS=<hex_or_comma_separated_hexes>   # keys allowed on /translate/pro
+AUDIT_HMAC_SECRET=<hex>                   # HMAC for append-only audit logs
+```
+
+Server-time envs:
+
+- `EDGE_SHIELD_TOKEN` from `.secrets/EDGE_SHIELD_TOKEN`
+- `EDGE_SHIELD_ENFORCE=1` to block non-edge origin traffic in dev and prod
+- `BACKEND_CACHE_TTL` optional (seconds), default 120–180 in dev
+
+---
+
+## Endpoints
+
+| Route             | Method | Auth        | Purpose                               |
+|-------------------|--------|-------------|----------------------------------------|
+| `/health`         | GET    | none        | `{ ok, db, safe_rows }`                |
+| `/translate`      | POST   | none        | Free tier (safety ≤ 1)                 |
+| `/translate/pro`  | POST   | `x-api-key` | Pro tier (safety ≥ 2) + packs          |
+| `/admin/cache_stats` | GET | `x-edge-shield` via Worker + admin key at edge | cache hit/miss counters |
+
+**Request bodies**
+
+Free:
+```json
+{ "text": "kemon acho", "src_lang": "banglish", "dst_lang": "english" }
+```
+
+Pro:
+```json
+{ "text": "Bindaas", "pack": "slang" }
+```
+
+Packs: `slang`, `profanity`, `dialect-sylheti`
+
+Errors: 400 malformed JSON, 413 too large (> 2 KB), 415 wrong content-type, 401 missing or invalid API key, 429 rate limited.
+
+---
+
+## Security middleware
+
+- Strict JSON schema (`text` required, ≤ 1000 chars)
+- Sanitization (strip SQL-like tokens, path traversal). Hard cap 2 KB POST body
+- CORS allowlist from `CORS_ORIGINS`
+- Security headers (HSTS, CSP, nosniff, frame deny, referrer)
+- IP + fingerprint rate limit (60/min), temp bans after repeated abuse
+- API key gate on `/translate/pro`
+- HMAC-signed audit logs at `private/audit/security.jsonl`  
+  Events: `bad_request`, `rate_limited`, `auth_fail`, `cors_block`, `temp_ban_*`
+
+Files of interest:
+- `backend/security_middleware.py`
+- `backend/scripts/secure_log.py`
+
+---
+
+## Caching
+
+**Edge KV cache** (in Worker)
+- Caches successful `/translate*` responses
+- Headers:
+  - `CF-Cache-Edge: MISS` on first
+  - `CF-Cache-Edge: HIT` on repeat
+
+**Backend TTL cache** (in-process)
+- Middleware caches JSON responses for `/translate*`
+- Bypass edge with `?cache=no` to test backend cache
+- Header:
+  - `X-Backend-Cache: MISS` then `HIT`
+
+---
+
+## Data model and scripts
+
+- SQLite DB at `backend/data/translations.db`
+- Safety levels: `≤ 1` free, `≥ 2` pro
+- Packs: `slang`, `profanity`, `dialect-sylheti`
+
+Normalize/import packs:
+```bash
+python3 backend/scripts/normalize_jsonl.py \
+  private/packs_raw/newstuff/dhk_align_cultural_pack_001.jsonl \
+  private/packs_raw/newstuff/dhk_align_cultural_pack_001.CLEAN.jsonl cultural 1
+
+python3 backend/scripts/import_clean_jsonl.py \
+  private/packs_raw/newstuff/dhk_align_cultural_pack_001.CLEAN.jsonl
+```
+
+Export safe client cache:
+```bash
+python3 backend/scripts/export_client_cache.py
+# writes frontend/src/data/dhk_align_client.json (safety ≤ 1 only)
+```
+
+---
+
+## Deployment notes
+
+- Do not expose the origin publicly
+- Front with the Cloudflare Worker and require `x-edge-shield`
+- Allowlists at the edge: `/health`, `/translate`, `/translate/pro`, `/admin/*` with admin key at edge
+- Orange-cloud DNS or Tunnel; keep origin private
+- Never commit `.env`, `backend/data/translations.db`, or anything under `private/` (already in .gitignore)
+
+---
+
+## Quick tests
+
+Origin direct (should be blocked when `EDGE_SHIELD_ENFORCE=1`):
+```bash
+curl -i -X POST http://127.0.0.1:8090/translate \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"hello","src_lang":"banglish","dst_lang":"english"}'
+```
+
+Through edge (adjust port to your dev Worker, 8787 or 8788):
+```bash
+PORT=8788
+# health
+curl -s http://127.0.0.1:$PORT/edge/health | jq .
+# admin stats
+curl -s -H "x-admin-key: $(cat ~/Dev/dhkalign/.secrets/ADMIN_KEY)" \
+  http://127.0.0.1:$PORT/admin/cache_stats | jq .
+# cache MISS -> HIT
+curl -is -X POST http://127.0.0.1:$PORT/translate \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | sed -n '1,20p'
+curl -is -X POST http://127.0.0.1:$PORT/translate \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | sed -n '1,20p'
+# backend TTL cache (bypass edge)
+curl -is -X POST "http://127.0.0.1:$PORT/translate?cache=no" \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | sed -n '1,20p'
+```
+
+---
+
+## License and contacts
+
+MIT — see `LICENSE`.
+
+Support — info@dhkalign.com  
+Admin/Security — admin@dhkalign.com (subject "SECURITY")

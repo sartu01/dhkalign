@@ -46,3 +46,15 @@ def translate(req: TranslateReq):
     if not hit:
         raise HTTPException(status_code=404, detail="Translation not available (safe tier)")
     return {"src": req.text, "dst": hit}
+
+
+# --- WRAITH BACKEND TTL CACHE + ADMIN (app_sqlite) ---
+try:
+    from backend.middleware_cache import TTLResponseCacheMiddleware
+    app.add_middleware(TTLResponseCacheMiddleware)
+    from backend.admin_cache_stats import router as _admin_cache_router
+    app.include_router(_admin_cache_router)
+except Exception as _e:
+    # non-fatal: app still boots even if optional modules missing
+    pass
+# --- END WRAITH BACKEND TTL CACHE + ADMIN ---

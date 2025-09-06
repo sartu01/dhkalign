@@ -1,0 +1,19 @@
+name = "dhkalign-edge"
+main = "src/index.js"
+compatibility_date = "2025-09-06"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = ""
+preview_id = "80b3191e204c4632934491dbb70743b7"
+
+[[kv_namespaces]]
+binding = "USAGE"
+id = ""
+preview_id = "a9d2380aee074c678f7cc52220969bc4"
+
+[vars]
+ORIGIN_BASE_URL = "http://127.0.0.1:8090"
+CACHE_TTL_SECONDS = "300"
+REQUIRE_API_KEY = "false"
+DEFAULT_API_KEY = "dev"

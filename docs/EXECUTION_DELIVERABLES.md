@@ -12,7 +12,7 @@
   "variant": ["salam", "salamualaikum"],
   "translit": "assalamu alaikum",
   "transliteration": "assalamu alaikum",
-  "translation_en": "peace be upon you",
+  "translation_en (safe only; pro packs private)": "peace be upon you",
   "context_tag": "greeting_religious",
   "region": "dhk_general",
   "confidence": 0.95,
@@ -24,7 +24,8 @@
   "reviewed_by": "curator",
   "created_at": "2025-01-15T00:00:00Z",
   "updated_at": "2025-01-15T00:00:00Z",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "safety_level": 1
 }
 ```
 
@@ -35,12 +36,17 @@ data/
 ├── LICENSE.md             # CC-BY-SA-4.0 + attribution
 ├── SCHEMA.md              # Field definitions
 ├── releases/
-│   ├── v0.1.0-street.jsonl    # 150 phrases
-│   ├── v0.1.0-vendor.jsonl    # 80 phrases  
+│   ├── v0.1.0-street.jsonl    # 150 phrases (safe tier, safety ≤1)
+│   ├── v0.1.0-vendor.jsonl    # 80 phrases (safe tier, safety ≤1)
 │   └── v0.1.0-meta.json       # Release metadata
 └── contrib/
     ├── pending.jsonl          # Unreviewed submissions
     └── rejected.jsonl         # Failed review with reasons
+
+private/
+├── pro_packs/
+│   ├── pro_pack_001.jsonl     # pro tier packs, safety ≥2
+│   └── ...
 ```
 
 ### Field Definitions
@@ -48,12 +54,13 @@ data/
 - **source**: Original Banglish as typed
 - **variant**: Array of alternate spellings
 - **transliteration**: Standard transliteration form
-- **translation_en**: English translation
+- **translation_en (safe only; pro packs private)**: English translation (only in safe packs, pro packs are private)
 - **context_tag**: `{domain}_{subdomain}` (greeting_casual, vendor_bargain)
 - **region**: dhk_general, syl_rural, cox_coastal
 - **confidence**: 0.0-1.0 (curator assessment)
 - **pack**: street, vendor, cultural, slang
 - **phonetic_fidelity**: low/medium/high (how close Banglish matches pronunciation)
+- **safety_level**: integer indicating tier (safe ≤1, pro ≥2)
 
 ## 2. Testing Plan
 
@@ -132,7 +139,7 @@ describe('Transliterator‑tion Engine', () => {
 test('Basic transliterator‑tion flow', async ({ page }) => {
   await page.goto('/');
   await page.fill('[data-testid=input]', 'eta koto');
-  await page.click('[data-testid=translate]');
+  await page.click('[data-testid=transliterator-tion]');
   await expect(page.locator('[data-testid=output]')).toContainText('how much is this');
 });
 
@@ -140,14 +147,14 @@ test('Offline mode works', async ({ page, context }) => {
   await context.setOffline(true);
   await page.goto('/');
   await page.fill('[data-testid=input]', 'dhonnobad');
-  await page.click('[data-testid=translate]');
+  await page.click('[data-testid=transliterator-tion]');
   await expect(page.locator('[data-testid=output]')).toContainText('thank you');
 });
 
 test('Copy to clipboard', async ({ page }) => {
   await page.goto('/');
   await page.fill('[data-testid=input]', 'lagbe na');
-  await page.click('[data-testid=translate]');
+  await page.click('[data-testid=transliterator-tion]');
   await page.click('[data-testid=copy-btn]');
   // Verify clipboard content
 });
@@ -208,7 +215,7 @@ async function runBenchmarks() {
     cache: { hit_rate: 0, hits: 0, misses: 0 }
   };
   
-  console.log('Running accuracy benchmark...');
+  console.log('Running accuracy benchmark for Transliterator‑tion engine...');
   for (const phrase of goldSet.phrases) {
     const start = performance.now();
     const result = await translate(phrase.input);
@@ -249,16 +256,26 @@ async function runBenchmarks() {
 git clone https://github.com/user/dhk-align
 cd dhk-align
 npm install
-npm start  # Frontend on :3000
+
+# Backend runs on port 8090 (server tab)
+npm run backend
+
+# Edge Worker runs on ports 8787/8788 (worker tab)
+npm run worker
+
+# Frontend runs on :3000 and calls Worker, never origin
+npm start
 ```
 
 ## What This Solves
 - Foreigners in Bangladesh need authentic phrases, not textbook Bengali
 - "Eta koto?" not "What is the price of this item?"
-- Works offline (no internet bills for basic translation)
+- Works offline (no internet bills for basic transliterator‑tion)
 
 ## Architecture
-- **Frontend**: React PWA, offline-capable
+- **Frontend**: React PWA, offline-capable, calls Worker, never origin
+- **Backend**: Private origin behind Worker, runs on port 8090
+- **Edge Worker**: KV cache + usage logs, runs on ports 8787/8788, shields backend
 - **Engine**: Phonetic normalization + weighted n-gram matching
 - **Dataset**: 230+ curated phrases (Street Pack + Vendor Pack)
 - **Performance**: 20ms median, 92% accuracy, 60% cache hit rate
@@ -268,18 +285,22 @@ npm start  # Frontend on :3000
 - **Vendor Pack**: Shopping, bargaining, transportation
 
 ## Screenshots
-[Mobile interface] [Translation flow] [Offline mode]
+[Mobile interface] [Transliterator‑tion flow] [Offline mode]
 ```
 
 ### Demo Deployment Strategy
 1. **Frontend**: Deploy to Vercel
    - Build: `npm run build`
-   - Environment: Set REACT_APP_API_URL for backend
+   - Environment: Set REACT_APP_API_URL for backend Worker URL
    - Custom domain: dhk-align.com
 
 2. **Backend**: Deploy to Railway/Render
-   - FastAPI with /translate and /translate/pro (private origin, API key gate)
-   - Origin hidden; all traffic passes through Cloudflare Worker
+   - FastAPI on port 8090 with /translate and /translate/pro (private origin, API key gate)
+   - Backend is private origin behind Edge Worker
+
+3. **Edge Worker**: Deploy on Cloudflare Worker
+   - Handles all client requests, enforces rate limits, caches, logs usage
+   - Origin hidden behind Worker
 
 ### Loom Walkthrough Script (90 seconds)
 1. **0-15s**: "This is DHK Align - helps you blend in Bangladesh with authentic Banglish"
@@ -341,7 +362,8 @@ This honesty builds trust and sets realistic expectations for users and contribu
 Each deliverable is standalone and testable. No dependencies on external approvals.
 
 ## 6. Security Integration (Added Posture)
-- **Hidden backend**: origin private, accessed only through Cloudflare Worker.
-- **Audit logging**: all bad requests, rate-limits, and auth fails recorded in HMAC‑signed JSONL (`private/audit/security.jsonl`).
-- **Backups**: nightly cron, local only.
-- **Edge shield**: Worker enforces rate‑limit and allowlist paths before origin.
+- **Hidden backend**: Private origin behind Edge Worker, accessed only through Cloudflare Worker.
+- **Edge Worker shield**: Enforces rate-limits, allowlist paths, and hides origin.
+- **Audit logging**: All bad requests, rate-limits, and auth failures recorded in HMAC‑signed JSONL (`private/audit/security.jsonl`).
+- **Backups**: Nightly cron jobs, stored locally only.
+- **Edge cache**: KV store caches frequent queries and logs usage for analytics.
