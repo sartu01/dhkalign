@@ -71,3 +71,7 @@ private/archive_desktop_translator_*/
 backend/security_middleware.py.bak
 # Generated cache
 frontend/src/data/
+
+# Local secrets & wrangler state
+.secrets/
+infra/edge/.wrangler/
