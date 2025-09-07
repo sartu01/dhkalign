@@ -5,12 +5,26 @@ export default {
 
     const url = new URL(request.url);
 
+    // --- Admin API key management (edge-handled, no forward) ---
+    if (url.pathname.startsWith('/admin/keys/')) {
+      if (request.headers.get('x-admin-key') !== env.ADMIN_KEY) {
+        return json({ error: 'unauthorized' }, 401);
+      }
+      const k = url.searchParams.get('key') || '';
+      if (!k) return json({ error: 'missing key' }, 400);
+      const action = url.pathname.slice('/admin/keys/'.length);
+      if (action === 'add')   { await env.USAGE.put('apikey:' + k, "1"); return json({ ok: true, key: k }); }
+      if (action === 'del')   { await env.USAGE.delete('apikey:' + k);   return json({ ok: true, key: k }); }
+      if (action === 'check') { const enabled = (await env.USAGE.get('apikey:' + k)) === "1"; return json({ key: k, enabled }); }
+      return json({ error: 'unknown action' }, 400);
+    }
+
     // Edge-only health
     if (url.pathname === '/edge/health') {
       return json({ status: 'ok', source: 'edge', time: new Date().toISOString() });
     }
 
-    // Admin health (key-gated)
+    // Admin aggregate health (edge -> origin /health)
     if (url.pathname === '/admin/health') {
       const key = request.headers.get('x-admin-key');
       if (!key || key !== env.ADMIN_KEY) return json({ error: 'unauthorized' }, 401);
@@ -28,15 +42,17 @@ export default {
       return json({ status: 'ok', source: 'edge', origin, time: new Date().toISOString() });
     }
 
-    // API key handling (edge-level; backend can gate too)
-    const requireKey = (env.REQUIRE_API_KEY || 'false') === 'true';
-    const apiKey = request.headers.get('x-api-key') || env.DEFAULT_API_KEY || 'dev';
-    if (requireKey && !request.headers.get('x-api-key')) {
-      return json({ error: 'x-api-key required' }, 401);
+    // API key gating (edge): ONLY for /translate/pro
+    const apiKeyHeader = request.headers.get('x-api-key');
+    if (url.pathname.startsWith('/translate/pro')) {
+      if (!apiKeyHeader) return json({ error: 'x-api-key required' }, 401);
+      const ok = (await env.USAGE.get('apikey:' + apiKeyHeader)) === "1";
+      if (!ok) return json({ error: 'invalid api key' }, 401);
     }
 
+    // Caching decision
     const method = request.method.toUpperCase();
-    const cacheable = cacheablePath(url.pathname) && (method === 'GET' || method === 'POST');
+    const cacheable = url.pathname.startsWith('/translate') && (method === 'GET' || method === 'POST');
     const bypass = url.searchParams.get('cache') === 'no';
 
     // KV cache lookup
@@ -73,8 +89,9 @@ export default {
     const bodyArr = await originResp.arrayBuffer();
     const resp = new Response(bodyArr, { status, headers: respHeaders });
 
-    // Async usage log
-    ctx.waitUntil(logUsage(env, apiKey, url.pathname));
+    // Async usage log (per API key per day; uses DEFAULT when none)
+    const apiKeyForMeter = apiKeyHeader || env.DEFAULT_API_KEY || 'dev';
+    ctx.waitUntil(logDailyUsage(env, apiKeyForMeter, url.pathname));
 
     // KV store on success
     if (cacheKey && status >= 200 && status < 300) {
@@ -93,29 +110,15 @@ export default {
   }
 };
 
-function cacheablePath(p) {
-  // Cache translate endpoints
-  return p.startsWith('/translate');
-}
-
-function cors() {
-  const h = new Headers();
-  addCors(h);
-  return new Response(null, { headers: h });
-}
+// ---------- helpers ----------
+function cors() { const h = new Headers(); addCors(h); return new Response(null, { headers: h }); }
 function addCors(h) {
   h.set('Access-Control-Allow-Origin', '*');
   h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   h.set('Access-Control-Allow-Headers', 'Content-Type, x-api-key, x-admin-key');
 }
-function json(obj, status = 200) {
-  const h = new Headers({ 'content-type': 'application/json' });
-  addCors(h);
-  return new Response(JSON.stringify(obj), { status, headers: h });
-}
-async function safeJson(r) {
-  try { return await r.json(); } catch { return { raw: await r.text() }; }
-}
+function json(obj, status = 200) { const h = new Headers({ 'content-type': 'application/json' }); addCors(h); return new Response(JSON.stringify(obj), { status, headers: h }); }
+async function safeJson(r) { try { return await r.json(); } catch { return { raw: await r.text() }; } }
 async function cacheKeyFrom(request) {
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
@@ -131,7 +134,7 @@ async function sha256Hex(bytes) {
   const d = await crypto.subtle.digest('SHA-256', bytes);
   return [...new Uint8Array(d)].map(x => x.toString(16).padStart(2, '0')).join('');
 }
-async function logUsage(env, apiKey, path) {
+async function logDailyUsage(env, apiKey, path) {
   try {
     const now = new Date();
     const day = now.toISOString().slice(0, 10);
@@ -141,6 +144,6 @@ async function logUsage(env, apiKey, path) {
     data.count += 1;
     data.last = now.toISOString();
     data.paths[path] = (data.paths[path] || 0) + 1;
-    await env.USAGE.put(key, JSON.stringify(data), { expirationTtl: 60 * 60 * 40 }); // ~40h
+    await env.USAGE.put(key, JSON.stringify(data), { expirationTtl: 40 * 60 * 60 }); // ~40h
   } catch {}
 }

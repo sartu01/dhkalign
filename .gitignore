@@ -75,3 +75,4 @@ frontend/src/data/
 # Local secrets & wrangler state
 .secrets/
 infra/edge/.wrangler/
+infra/edge/.dev.vars
