@@ -13,7 +13,30 @@ id = "d1f0c46aba204abc8fce5de642106a2a"
 preview_id = "a9d2380aee074c678f7cc52220969bc4"
 
 [vars]
-ORIGIN_BASE_URL = "http://127.0.0.1:8090"
+ORIGIN_BASE_URL = "https://world-pattern-webcams-lakes.trycloudflare.com"
 CACHE_TTL_SECONDS = "300"
 REQUIRE_API_KEY = "false"
 DEFAULT_API_KEY = "dev"
+
+
+# -----------------------------
+# Production environment config
+# -----------------------------
+[env.production.vars]
+# TODO: set this to your public backend or tunnel URL before deploy
+ORIGIN_BASE_URL = "https://world-pattern-webcams-lakes.trycloudflare.com"
+REQUIRE_API_KEY = "true"
+CACHE_TTL_SECONDS = "300"
+DEFAULT_API_KEY = ""
+
+# Optional: bind a custom route once your zone is on Cloudflare
+# [env.production]
+# routes = [
+#   { pattern = "api.dhkalign.com/*", zone_name = "dhkalign.com" }
+# ]
+
+[env.production]
+kv_namespaces = [
+  { binding = "CACHE", id = "97e93c549954436f8370f6e7894ad6ef" },
+  { binding = "USAGE", id = "d1f0c46aba204abc8fce5de642106a2a" }
+]

@@ -4,6 +4,16 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from backend.scripts.secure_log import secure_log
 
+# --- WRAITH trust-edge helper ---
+EDGE_SHIELD_TOKEN = os.getenv("EDGE_SHIELD_TOKEN", "")
+
+def _edge_trusted_header(request):
+    try:
+        return bool(EDGE_SHIELD_TOKEN) and request.headers.get("x-edge-shield") == EDGE_SHIELD_TOKEN
+    except Exception:
+        return False
+# --- END trust-edge helper ---
+
 CORS = [o.strip() for o in os.getenv("CORS_ORIGINS","").split(",") if o.strip()]
 API_KEYS = {k.strip() for k in os.getenv("API_KEYS","").split(",") if k.strip()}
 
@@ -93,13 +103,18 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             return JSONResponse({"detail":"Rate limit exceeded"}, status_code=429)
         bucket.append(now)
 
-        # Pro gate
+        # Pro gate (trust edge)
         if request.url.path.startswith("/translate/pro"):
-            api_key = request.headers.get("x-api-key") or request.headers.get("authorization","").replace("Bearer ","")
-            if (not api_key) or (api_key not in API_KEYS):
-                _fail(ip)
-                secure_log("auth_fail", {"ip": ip}, "WARN")
-                return JSONResponse({"detail":"API key required"}, status_code=401)
+            # If request came through the Worker with a valid shield header,
+            # skip origin API_KEYS enforcement and trust the edge.
+            if not _edge_trusted_header(request):
+                api_key = request.headers.get("x-api-key") or request.headers.get(
+                    "authorization", ""
+                ).replace("Bearer ", "")
+                if (not api_key) or (api_key not in API_KEYS):
+                    _fail(ip)
+                    secure_log("auth_fail", {"ip": ip}, "WARN")
+                    return JSONResponse({"detail": "API key required"}, status_code=401)
 
         resp = await call_next(request)
         _headers(resp.headers)
