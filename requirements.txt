@@ -3,7 +3,7 @@
 # We no longer use runtime.txt; Python version is set via deploy config (e.g., Docker/Runner).
 # uvicorn[standard] bundles httptools, uvloop, websockets, and watchfiles
 annotated-types==0.7.0
-anyio==3.7.1
+anyio==4.10.0
 click==8.2.1
 Deprecated==1.2.18
 fastapi==0.116.1
