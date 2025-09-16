@@ -11,6 +11,7 @@ Thanks for helping build DHK Align. This guide tells you how to run the stack lo
 - **JSON contract.** Responses are `{ ok:true, data:{...} }` or `{ ok:false, error:"..." }`. No HTML error pages.
 - **One DB path.** Runtime DB = `backend/data/translations.db`.
 - **Identity invariant.** De‑dup at DB level: *(src_lang, roman_bn_norm, tgt_lang, pack)* is unique. `id` is cosmetic.
+- **Pro fallback (optional).** Origin can call a GPT model on DB miss (gpt‑4o‑mini by default) under tight limits; results are auto‑inserted for next time. Toggle via Fly secrets.
 
 ---
 
@@ -37,6 +38,29 @@ BROWSER=false wrangler dev --local --ip 127.0.0.1 --port 8789 --config wrangler.
 **Secrets**
 - Dev secrets: `infra/edge/.dev.vars`  
 - Prod secrets: Wrangler secrets
+
+### Backend (Fly) Environment Variables
+- `OPENAI_API_KEY` — OpenAI key (sk‑…), required only if fallback is enabled
+- `ENABLE_GPT_FALLBACK` — set to `1` to enable GPT fallback on DB miss
+- `GPT_MODEL` — model name (default: `gpt‑4o‑mini`)
+- `GPT_MAX_TOKENS` — max tokens for fallback responses (default: `128`)
+- `GPT_TIMEOUT_MS` — timeout in milliseconds (default: `2000`)
+
+## 🤖 GPT Fallback (optional)
+
+Enable GPT fallback in production so DB misses return a model translation and are auto‑inserted for next time:
+
+```bash
+flyctl secrets set -a dhkalign-backend \
+  OPENAI_API_KEY='sk-…' \
+  ENABLE_GPT_FALLBACK='1' \
+  GPT_MODEL='gpt-4o-mini' \
+  GPT_MAX_TOKENS='128' \
+  GPT_TIMEOUT_MS='2000'
+cd ~/Dev/dhkalign && flyctl deploy -a dhkalign-backend
+```
+
+First miss via `/translate/pro` will return `{ ok:true, data:{ …, "source":"gpt" } }`; repeated calls return `{ …, "source":"db" }` after auto‑insert.
 
 ---
 
@@ -103,14 +127,15 @@ curl -is -X POST "http://127.0.0.1:8789/translate?cache=no" \
   -d '{"text":"Bazar korbo"}' | grep X-Backend-Cache
 ```
 
-**Pro** (mint key → call)
+**Pro** (mint key → call; 200 from DB or 404 if not found unless fallback is ON)
+
 ```bash
 KEY="dev_$(openssl rand -hex 6)"
 curl -s -H "x-admin-key: $AK" "http://127.0.0.1:8789/admin/keys/add?key=$KEY" | jq .
 
 curl -is -X POST http://127.0.0.1:8789/translate/pro \
   -H 'Content-Type: application/json' -H "x-api-key: $KEY" \
-  -d '{"text":"jam e pore asi"}' | sed -n '1,4p'
+  -d '{"text":"jam e pore asi","src_lang":"bn-rom","tgt_lang":"en"}' | sed -n '1,6p'
 ```
 
 ---
@@ -153,6 +178,7 @@ wrangler secret put STRIPE_WEBHOOK_SECRET --env production
 wrangler deploy --env production
 ```
 - Stripe → endpoint → **Interactive webhook builder** → send `checkout.session.completed` (no signature failures in tail).
+- Set backend secrets on Fly (optional fallback): OPENAI_API_KEY, ENABLE_GPT_FALLBACK, GPT_MODEL, GPT_MAX_TOKENS, GPT_TIMEOUT_MS; then deploy Fly app.
 
 ---
 
@@ -160,6 +186,7 @@ wrangler deploy --env production
 | Symptom                                   | Possible Cause                     | Fix                                                     |
 |-------------------------------------------|------------------------------------|---------------------------------------------------------|
 | Origin returns 403 in logs (Worker→origin) | Missing/invalid `x-edge-shield`    | Set correct EDGE_SHIELD_TOKEN; enable enforcement       |
+| Pro returns 404 on a miss (fallback expected) | Fallback disabled or missing OPENAI_API_KEY | Set OPENAI_API_KEY & ENABLE_GPT_FALLBACK on Fly, redeploy; verify from Fly |
 | Admin API 401                              | Missing/invalid `x-admin-key`      | Provide correct admin key                                |
 | 429 quota                                  | Daily per‑key quota exceeded       | Wait for reset / reduce request rate                    |
 | Cache always MISS                          | Method/path/body differ             | Send identical requests; avoid `?cache=no` for cache HIT|

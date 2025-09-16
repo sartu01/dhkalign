@@ -6,10 +6,10 @@ The full **Secured MVP README** with internal architecture and sensitive details
 
 For general documentation, see [docs/](docs/).
 
-# DHK Align — Banglish ⇄ English Transliterator-tion Engine
+# DHK Align — Banglish ⇄ English Translation Engine
 
-> **Open-core, security-first transliterator-tion engine.**  
-> Free tier runs client-side with safe data; Pro tier is API-key gated with premium packs.  
+> **Open-core, security-first translation engine.**  
+> Free tier uses safe data; Pro tier is API-key gated with premium packs and optional GPT fallback.  
 
 ---
 
@@ -24,9 +24,13 @@ For general documentation, see [docs/](docs/).
   - Stripe webhook: `/webhook/stripe` (requires `stripe-signature` header, 5-min tolerance, only `checkout.session.completed` events accepted, replay lock with KV)
   - Billing key handoff: `/billing/key` (returns key once, origin allowlisted)
   - Free translate: "/translate" (POST {"text":"..."} canonical; GET ?q= supported)
+  - Root & favicon: "/" returns minimal JSON; "/favicon.ico" returns 204 (no more noisy 403s)
+  - Admin whoami: "/admin/whoami" (names-only env + origin/kv info; requires x-admin-key)
   - CORS enforcement applied.
 - **Backend:** FastAPI (private origin, port 8090) behind the Worker.  
   - Routes: `/health`, `/translate`, `/translate/pro`  
+  - Pro fallback (optional): DB-first → GPT fallback (if enabled) → auto-insert into DB → serve
+  - Metrics: "/metrics" (Prometheus) — db_hit, gpt_fallback, gpt_fail, request latency
   - Backend API requires POST requests with JSON body `{"text":"..."}` (preferred); `{"q":"..."}` may be supported but `text` is recommended. Optional `{"pack":"..."}` for Pro tier.  
   - TTL cache: adds `X-Backend-Cache: HIT|MISS` when bypassing edge cache (`?cache=no`)  
   - Audit: HMAC-signed append-only logs (`private/audit/security.jsonl`)  
@@ -119,18 +123,24 @@ curl -s 'http://127.0.0.1:8789/translate?q=Bazar%20korbo' | jq
 ```bash
 curl -is -X POST http://127.0.0.1:8789/translate \
   -H 'Content-Type: application/json' \
-  -d '{"text":"kemon acho"}' | grep CF-Cache-Edge
+  -d '{"text":"Bazar korbo"}' | grep CF-Cache-Edge
 
 curl -is -X POST http://127.0.0.1:8789/translate \
   -H 'Content-Type: application/json' \
-  -d '{"text":"kemon acho"}' | grep CF-Cache-Edge
+  -d '{"text":"Bazar korbo"}' | grep CF-Cache-Edge
 ```
 
 **Bypass edge (backend TTL cache)**  
 ```bash
 curl -is -X POST "http://127.0.0.1:8789/translate?cache=no" \
   -H 'Content-Type: application/json' \
-  -d '{"text":"kemon acho"}' | grep X-Backend-Cache
+  -d '{"text":"Bazar korbo"}' | grep X-Backend-Cache
+```
+
+**Metrics**
+```bash
+curl -is https://backend.dhkalign.com/metrics | sed -n '1,8p'
+curl -s  https://backend.dhkalign.com/metrics | egrep 'dhk_db_hit_total|dhk_gpt_fallback_total|dhk_gpt_fail_total' | sort
 ```
 
 ---
@@ -200,6 +210,13 @@ For internal ops and sensitive details, see `private/docs/README_secured_MVP.md`
 - `CORS_ORIGINS` — allowed origins for CORS.  
 - Worker secrets managed via Wrangler secrets for production, `infra/edge/.dev.vars` for development.
 
+### Backend (Fly) Environment Variables
+- `OPENAI_API_KEY` — OpenAI key (sk-…), required only if fallback is enabled
+- `ENABLE_GPT_FALLBACK` — set to `1` to enable GPT fallback on DB miss
+- `GPT_MODEL` — model name (default: `gpt-4o-mini`)
+- `GPT_MAX_TOKENS` — max tokens for fallback responses (default: `128`)
+- `GPT_TIMEOUT_MS` — timeout in milliseconds (default: `2000`)
+
 ---
 
 ## 🛠 Troubleshooting Cheatsheet
@@ -219,11 +236,12 @@ For internal ops and sensitive details, see `private/docs/README_secured_MVP.md`
 
 1. Set `ORIGIN_BASE_URL` in `infra/edge/wrangler.toml` (both default and `[env.production]`) to https://backend.dhkalign.com.  
 2. Configure Wrangler secrets with production keys (`EDGE_SHIELD_TOKEN`, `ADMIN_KEY`, API keys).  
-3. Deploy Worker with `wrangler deploy --env production`.  
-4. Configure Stripe webhook endpoint and secret in Stripe dashboard.  
-5. Verify admin and API keys work as expected.  
-6. Confirm rate limiting and caching behavior in production.  
-7. Schedule backups and audit log monitoring.
+3. Set backend secrets on Fly (optional fallback): OPENAI_API_KEY, ENABLE_GPT_FALLBACK, GPT_MODEL, GPT_MAX_TOKENS, GPT_TIMEOUT_MS; then deploy Fly app.
+4. Deploy Worker with `wrangler deploy --env production`.  
+5. Configure Stripe webhook endpoint and secret in Stripe dashboard.  
+6. Verify admin and API keys work as expected.  
+7. Confirm rate limiting and caching behavior in production.  
+8. Schedule backups and audit log monitoring.
 
 ---
 

@@ -49,12 +49,16 @@ test-results/
 
 # Backups
 _backup/
+# Editor/backups
+*.bak.*
+*~
+*.swp
+*.swo
 
 # WRAITH guardrails
 long_tail.py
 ### WRAITH LOCKS
 **/.env*
-private/
 backend/data/
 *.db
 *.db-*
@@ -67,8 +71,6 @@ private/archive_desktop_translator_*/
 
 # VS Code
 .vscode/
-# Backup file
-backend/security_middleware.py.bak
 # Generated cache
 frontend/src/data/
 
