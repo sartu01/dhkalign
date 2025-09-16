@@ -1,9 +1,29 @@
+import { handleStripeWebhook } from './stripe.js';
+
 export default {
   async fetch(request, env, ctx) {
     // CORS preflight
     if (request.method === 'OPTIONS') return cors();
 
     const url = new URL(request.url);
+
+    // Stripe webhook route
+    if (url.pathname === '/webhook/stripe' && request.method === 'POST') {
+      return await handleStripeWebhook(request, env);
+    }
+
+    // Billing key fetch route
+    if (url.pathname === '/billing/key' && request.method === 'GET') {
+      const session_id = url.searchParams.get('session_id');
+      if (!session_id) {
+        return json({ error: 'missing session_id' }, 400);
+      }
+      const api_key = await env.USAGE.get('session_to_key:' + session_id);
+      if (!api_key) {
+        return json({ error: 'not found' }, 404);
+      }
+      return json({ api_key });
+    }
 
     // --- Admin API key management (edge-handled, no forward) ---
     if (url.pathname.startsWith('/admin/keys/')) {
