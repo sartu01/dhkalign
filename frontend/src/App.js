@@ -12,6 +12,23 @@ import { cleanupCache } from './utils/cache';
 cleanupCache();
 
 export default function App() {
+  // Stripe success page: fetch and store API key
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get("session_id");
+    const onSuccessPage = window.location.pathname.includes("success") && sessionId;
+    if (!onSuccessPage) return;
+    const stored = localStorage.getItem("dhk_api_key");
+    if (stored) return;
+    fetch(`https://dhkalign-edge-production.tnfy4np8pm.workers.dev/billing/key?session_id=${encodeURIComponent(sessionId)}`)
+      .then(r => r.json())
+      .then(j => {
+        if (j.ok && j.data && j.data.api_key) {
+          localStorage.setItem("dhk_api_key", j.data.api_key);
+          // Optionally show a toast or alert here
+        }
+      });
+  }, []);
   const { 
     translate, 
     provideFeedback, 
