@@ -17,6 +17,7 @@ ORIGIN_BASE_URL = "https://backend.dhkalign.com"
 CACHE_TTL_SECONDS = "300"
 REQUIRE_API_KEY = "false"
 DEFAULT_API_KEY = "dev"
+ALLOWED_ORIGINS = "https://dhkalign.com,https://www.dhkalign.com,http://127.0.0.1:5173,http://localhost:5173"
 
 
 # -----------------------------
