@@ -1,11 +1,38 @@
 import { handleStripeWebhook } from './stripe.js';
 
+// --- WRAITH JSON + quota helpers ---
+function j(ok, data = null, error = null, status = 200, extraHeaders = {}) {
+  const body = ok ? { ok: true, data } : { ok: false, error };
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", ...extraHeaders }
+  });
+}
+
+async function enforceQuota(request, env) {
+  const key = request.headers.get('x-api-key') || "";
+  if (!key) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  const usageKey = `usage:${key}:${today}`;
+  const count = parseInt((await env.USAGE.get(usageKey)) || "0", 10);
+  if (count >= 1000) return j(false, null, "quota_exceeded", 429);
+  await env.USAGE.put(usageKey, String(count + 1), { expirationTtl: 60 * 60 * 26 });
+  return null;
+}
+// --- end helpers ---
+
 export default {
   async fetch(request, env, ctx) {
     // CORS preflight
     if (request.method === 'OPTIONS') return cors();
 
     const url = new URL(request.url);
+
+    // per-key daily quota enforcement on translate routes
+    if (url.pathname.startsWith('/translate')) {
+      const quotaResp = await enforceQuota(request, env);
+      if (quotaResp) return quotaResp;
+    }
 
     // Stripe webhook route
     if (url.pathname === '/webhook/stripe' && request.method === 'POST') {
@@ -14,15 +41,28 @@ export default {
 
     // Billing key fetch route
     if (url.pathname === '/billing/key' && request.method === 'GET') {
-      const session_id = url.searchParams.get('session_id');
-      if (!session_id) {
-        return json({ error: 'missing session_id' }, 400);
+      const origin = request.headers.get('origin') || '';
+      const allowed = new Set([
+        'https://dhkalign.com',
+        'https://www.dhkalign.com',
+        'http://127.0.0.1:5173',
+        'http://localhost:5173'
+      ]);
+      if (origin && !allowed.has(origin)) {
+        return j(false, null, 'forbidden', 403);
       }
-      const api_key = await env.USAGE.get('session_to_key:' + session_id);
-      if (!api_key) {
-        return json({ error: 'not found' }, 404);
-      }
-      return json({ api_key });
+
+      const sid = url.searchParams.get('session_id');
+      if (!sid) return j(false, null, 'missing_session_id', 400);
+
+      const keyName = 'session_to_key:' + sid;
+      const api_key = await env.USAGE.get(keyName);
+      if (!api_key) return j(false, null, 'not_found', 404);
+
+      // one-time: delete mapping after successful read
+      await env.USAGE.delete(keyName);
+
+      return j(true, { api_key });
     }
 
     // --- Admin API key management (edge-handled, no forward) ---
