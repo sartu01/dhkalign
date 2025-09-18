@@ -1,13 +1,11 @@
 import { handleStripeWebhook } from './stripe.js';
 
-<<<<<<< HEAD
 // --- WRAITH JSON + quota helpers ---
 function j(ok, data = null, error = null, status = 200, extraHeaders = {}) {
   const body = ok ? { ok: true, data } : { ok: false, error };
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json", ...extraHeaders }
-  });
+  const h = new Headers({ "content-type": "application/json", ...extraHeaders });
+  addCors(h);
+  return new Response(JSON.stringify(body), { status, headers: h });
 }
 
 async function enforceQuota(request, env) {
@@ -31,8 +29,6 @@ function requireAdmin(request, env) {
   return null;
 }
 
-=======
->>>>>>> origin/main
 export default {
   async fetch(request, env, ctx) {
     // CORS preflight
@@ -40,21 +36,28 @@ export default {
 
     const url = new URL(request.url);
 
-<<<<<<< HEAD
+    // Simple root index and favicon to avoid noisy 403s
+    if (url.pathname === '/' && request.method === 'GET') {
+      return j(true, { service: 'dhkalign-edge', time: new Date().toISOString() });
+    }
+    if (url.pathname === '/favicon.ico') {
+      const h = new Headers();
+      addCors(h);
+      return new Response(null, { status: 204, headers: h });
+    }
+
     // Global admin guard: lock all /admin/* endpoints behind x-admin-key
     if (url.pathname.startsWith('/admin/')) {
       const guard = requireAdmin(request, env);
       if (guard) return guard;
     }
 
-    // per-key daily quota enforcement on translate routes
+    // Per-key daily quota on translate routes
     if (url.pathname.startsWith('/translate')) {
       const quotaResp = await enforceQuota(request, env);
       if (quotaResp) return quotaResp;
     }
 
-=======
->>>>>>> origin/main
     // Stripe webhook route
     if (url.pathname === '/webhook/stripe' && request.method === 'POST') {
       return await handleStripeWebhook(request, env);
@@ -62,7 +65,6 @@ export default {
 
     // Billing key fetch route
     if (url.pathname === '/billing/key' && request.method === 'GET') {
-<<<<<<< HEAD
       const origin = request.headers.get('origin') || '';
       const allowed = new Set([
         'https://dhkalign.com',
@@ -85,17 +87,6 @@ export default {
       await env.USAGE.delete(keyName);
 
       return j(true, { api_key });
-=======
-      const session_id = url.searchParams.get('session_id');
-      if (!session_id) {
-        return json({ error: 'missing session_id' }, 400);
-      }
-      const api_key = await env.USAGE.get('session_to_key:' + session_id);
-      if (!api_key) {
-        return json({ error: 'not found' }, 404);
-      }
-      return json({ api_key });
->>>>>>> origin/main
     }
 
     // --- Admin API key management (edge-handled, no forward) ---
@@ -130,6 +121,20 @@ export default {
         origin = { status: 'down', error: String(e) };
       }
       return json({ status: 'ok', source: 'edge', origin, time: new Date().toISOString() });
+    }
+
+    if (url.pathname === '/admin/whoami' && request.method === 'GET') {
+      const origin = new URL(env.ORIGIN_BASE_URL);
+      return j(true, {
+        env: {
+          hasAdmin: Boolean(env.ADMIN_KEY),
+          hasShield: Boolean(env.EDGE_SHIELD_TOKEN),
+          hasStripe: Boolean(env.STRIPE_WEBHOOK_SECRET),
+        },
+        origin: { host: origin.host, base: env.ORIGIN_BASE_URL },
+        kv: { namespaces: ['CACHE', 'USAGE'] },
+        time: new Date().toISOString(),
+      });
     }
 
     // Free translate — supports GET ?q=... and POST {text|q}; rewrites to POST { text } before forwarding
@@ -212,8 +217,8 @@ export default {
     const bodyArr = await originResp.arrayBuffer();
     const resp = new Response(bodyArr, { status, headers: respHeaders });
 
-    // Async usage log (per API key per day; uses DEFAULT when none)
-    const apiKeyForMeter = apiKeyHeader || env.DEFAULT_API_KEY || 'dev';
+    // Async usage log (per API key per day; uses 'free' when none)
+    const apiKeyForMeter = apiKeyHeader || 'free';
     ctx.waitUntil(logDailyUsage(env, apiKeyForMeter, url.pathname));
 
     // KV store on success
@@ -238,7 +243,7 @@ function cors() { const h = new Headers(); addCors(h); return new Response(null,
 function addCors(h) {
   h.set('Access-Control-Allow-Origin', '*');
   h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  h.set('Access-Control-Allow-Headers', 'Content-Type, x-api-key, x-admin-key');
+  h.set('Access-Control-Allow-Headers', 'Content-Type, x-api-key, x-admin-key, stripe-signature');
 }
 function json(obj, status = 200) { const h = new Headers({ 'content-type': 'application/json' }); addCors(h); return new Response(JSON.stringify(obj), { status, headers: h }); }
 async function safeJson(r) { try { return await r.json(); } catch { return { raw: await r.text() }; } }
