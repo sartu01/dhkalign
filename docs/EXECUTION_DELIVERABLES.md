@@ -1,369 +1,218 @@
-# DHK Align: Execution Deliverables (Transliterator‑tion Engine)
+# DHK Align — Public README
 
-## 1. Dataset Schema + Versioning
+This is the public-facing README for DHK Align.
 
-> Dataset powering the first Transliterator‑tion engine — curated, versioned, and safe/pro split.
+The full **Secured MVP README** with internal architecture and sensitive details has been moved to `private/docs/README_secured_MVP.md` and is **not intended for public GitHub**.
 
-### JSONL Schema (data/schema.jsonl)
-```json
-{
-  "id": "street_001",
-  "source": "assalamu alaikum",
-  "variant": ["salam", "salamualaikum"],
-  "translit": "assalamu alaikum",
-  "transliteration": "assalamu alaikum",
-  "translation_en (safe only; pro packs private)": "peace be upon you",
-  "context_tag": "greeting_religious",
-  "region": "dhk_general",
-  "confidence": 0.95,
-  "frequency": "high",
-  "formality": "polite",
-  "phonetic_fidelity": "high",
-  "pack": "street",
-  "added_by": "manual_seed",
-  "reviewed_by": "curator",
-  "created_at": "2025-01-15T00:00:00Z",
-  "updated_at": "2025-01-15T00:00:00Z",
-  "version": "0.1.0",
-  "safety_level": 1
-}
-```
+For general documentation, see [docs/](docs/).
 
-### Version Structure
-```
-data/
-├── VERSION                 # Current: 0.1.0
-├── LICENSE.md             # CC-BY-SA-4.0 + attribution
-├── SCHEMA.md              # Field definitions
-├── releases/
-│   ├── v0.1.0-street.jsonl    # 150 phrases (safe tier, safety ≤1)
-│   ├── v0.1.0-vendor.jsonl    # 80 phrases (safe tier, safety ≤1)
-│   └── v0.1.0-meta.json       # Release metadata
-└── contrib/
-    ├── pending.jsonl          # Unreviewed submissions
-    └── rejected.jsonl         # Failed review with reasons
+# DHK Align — Banglish ⇄ English Transliterator-tion Engine
 
-private/
-├── pro_packs/
-│   ├── pro_pack_001.jsonl     # pro tier packs, safety ≥2
-│   └── ...
-```
+> **Open-core, security-first transliterator-tion engine.**  
+> Free tier runs client-side with safe data; Pro tier is API-key gated with premium packs.  
 
-### Field Definitions
-- **id**: `{pack}_{incremental}` (street_001, vendor_025)
-- **source**: Original Banglish as typed
-- **variant**: Array of alternate spellings
-- **transliteration**: Standard transliteration form
-- **translation_en (safe only; pro packs private)**: English translation (only in safe packs, pro packs are private)
-- **context_tag**: `{domain}_{subdomain}` (greeting_casual, vendor_bargain)
-- **region**: dhk_general, syl_rural, cox_coastal
-- **confidence**: 0.0-1.0 (curator assessment)
-- **pack**: street, vendor, cultural, slang
-- **phonetic_fidelity**: low/medium/high (how close Banglish matches pronunciation)
-- **safety_level**: integer indicating tier (safe ≤1, pro ≥2)
+---
 
-## 2. Testing Plan
+## 🌟 Overview
 
-### Unit Tests (50+ cases)
+- **Frontend:** React SPA (free tier UI, client cache for safe data). The frontend only calls the Edge Worker.
+- **Edge Worker:** Cloudflare Worker is the only ingress in prod/dev.  
+  - KV namespaces:  
+    - `CACHE` — TTL response cache (`CF-Cache-Edge: HIT|MISS`)  
+    - `USAGE` — per-API-key counters (daily quotas)  
+  - Admin routes: `/edge/health`, `/admin/health`, `/admin/cache_stats`, `/admin/keys/add`, `/admin/keys/check`, `/admin/keys/del`
+  - Stripe webhook: `/webhook/stripe` (requires `stripe-signature` header, 5-min tolerance, only `checkout.session.completed` events accepted, replay lock with KV)
+  - Billing key handoff: `/billing/key` (returns key once, origin allowlisted)
+  - CORS enforcement applied.
+- **Backend:** FastAPI (private origin, port 8090) behind the Worker.  
+  - Routes: `/health`, `/translate`, `/translate/pro`  
+  - Backend API requires POST requests with JSON body `{"text":"..."}` (preferred); `{"q":"..."}` may be supported but `text` is recommended. Optional `{"pack":"..."}` for Pro tier.  
+  - TTL cache: adds `X-Backend-Cache: HIT|MISS` when bypassing edge cache (`?cache=no`)  
+  - Audit: HMAC-signed append-only logs (`private/audit/security.jsonl`)  
+  - Canonical DB path: `backend/data/translations.db`  
+  - DB identity guarantee: uniqueness enforced on `(src_lang, roman_bn_norm, tgt_lang, pack)`; `id` is cosmetic only.
 
-#### Phonetic Normalization (15 tests)
-```javascript
-// tests/phonetic.test.js
-describe('Phonetic Normalization', () => {
-  test('handles aspirated consonants', () => {
-    expect(normalize('dhonnobad')).toBe('thonobath');
-    expect(normalize('thik')).toBe('thik');
-  });
-  
-  test('vowel consistency', () => {
-    expect(normalize('kemon')).toBe('kemon');
-    expect(normalize('kemun')).toBe('kemon'); // variant
-  });
-  
-  test('compound reduction', () => {
-    expect(normalize('ekta')).toBe('ekta');
-    expect(normalize('ekto')).toBe('ekta'); // dialect
-  });
-});
-```
+---
 
-#### Slang Detection (20 tests)
-```javascript
-// tests/slang.test.js
-describe('Slang Detection', () => {
-  test('identifies casual vs formal', () => {
-    expect(getFormality('pagol naki')).toBe('very_informal');
-    expect(getFormality('dhonnobad')).toBe('polite');
-  });
-  
-  test('context tagging', () => {
-    expect(getContext('eta koto')).toBe('vendor_pricing');
-    expect(getContext('osthir')).toBe('slang_compliment');
-  });
-});
-```
+## ⚡ Quick Start (Dev, 2 Tabs)
 
-#### Transliterator‑tion Engine (15 tests)
-```javascript
-// tests/engine.test.js
-describe('Transliterator‑tion Engine', () => {
-  test('exact matches', () => {
-    expect(translate('assalamu alaikum')).toMatchObject({
-      translation_en: 'peace be upon you',
-      confidence: 0.95,
-      method: 'exact'
-    });
-  });
-  
-  test('fuzzy fallback', () => {
-    expect(translate('asalam alaikum')).toMatchObject({
-      translation_en: 'peace be upon you',
-      confidence: 0.85,
-      method: 'fuzzy'
-    });
-  });
-  
-  test('compound handling', () => {
-    expect(translate('mama eta koto')).toMatchObject({
-      translation_en: 'uncle, how much is this',
-      method: 'compound'
-    });
-  });
-});
-```
+**Prerequisites**  
+- Python >= 3.11  
+- Node.js >= 18  
+- jq  
+- sqlite3  
+- cloudflared  
+- wrangler
 
-### E2E Tests (10 flows - Playwright)
-
-```javascript
-// e2e/user-flows.spec.js
-test('Basic transliterator‑tion flow', async ({ page }) => {
-  await page.goto('/');
-  await page.fill('[data-testid=input]', 'eta koto');
-  await page.click('[data-testid=transliterator-tion]');
-  await expect(page.locator('[data-testid=output]')).toContainText('how much is this');
-});
-
-test('Offline mode works', async ({ page, context }) => {
-  await context.setOffline(true);
-  await page.goto('/');
-  await page.fill('[data-testid=input]', 'dhonnobad');
-  await page.click('[data-testid=transliterator-tion]');
-  await expect(page.locator('[data-testid=output]')).toContainText('thank you');
-});
-
-test('Copy to clipboard', async ({ page }) => {
-  await page.goto('/');
-  await page.fill('[data-testid=input]', 'lagbe na');
-  await page.click('[data-testid=transliterator-tion]');
-  await page.click('[data-testid=copy-btn]');
-  // Verify clipboard content
-});
-```
-
-### CI Integration
-```yaml
-# .github/workflows/test.yml
-name: Test
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - run: npm ci
-      - run: npm test
-      - run: npx playwright install
-      - run: npm run test:e2e
-```
-
-## 3. Benchmark Framework
-
-### Gold Set Structure (500 phrases)
-```javascript
-// benchmarks/gold-set.json
-{
-  "version": "0.1.0",
-  "created": "2025-01-15",
-  "phrases": [
-    {
-      "input": "eta koto",
-      "expected": "how much is this",
-      "category": "vendor_basic",
-      "difficulty": "easy"
-    },
-    {
-      "input": "pagol naki matha kharap",
-      "expected": "are you crazy or what",
-      "category": "slang_teasing", 
-      "difficulty": "hard"
-    }
-  ]
-}
-```
-
-### Benchmark Script
-```javascript
-// benchmarks/run.js
-async function runBenchmarks() {
-  const goldSet = require('./gold-set.json');
-  const results = {
-    accuracy: { p_at_1: 0, total: 0, correct: 0 },
-    latency: { median: 0, p95: 0, measurements: [] },
-    cache: { hit_rate: 0, hits: 0, misses: 0 }
-  };
-  
-  console.log('Running accuracy benchmark for Transliterator‑tion engine...');
-  for (const phrase of goldSet.phrases) {
-    const start = performance.now();
-    const result = await translate(phrase.input);
-    const duration = performance.now() - start;
-    
-    results.latency.measurements.push(duration);
-    
-    if (result.translation_en.toLowerCase().includes(phrase.expected.toLowerCase())) {
-      results.accuracy.correct++;
-    }
-    results.accuracy.total++;
-  }
-  
-  results.accuracy.p_at_1 = results.accuracy.correct / results.accuracy.total;
-  results.latency.median = median(results.latency.measurements);
-  
-  return results;
-}
-```
-
-### Performance Targets
-- **P@1 Accuracy**: ≥0.92 on Street Pack
-- **Median Latency**: ≤20ms on device
-- **Cache Hit Rate**: ≥60% by day 3
-- **Memory Usage**: ≤50MB peak on mobile
-
-## 4. README + Demo Polish
-
-### Root README (Transliterator‑tion)
-```markdown
-# DHK Align
-**Offline-first Banglish ↔ English transliterator‑tion engine with street-level context**
-
-[Demo](https://dhk-align.vercel.app) • [API Docs](./docs/api.md) • [Contributing](./CONTRIBUTING.md)
-
-## Quick Start
+**Server tab**  
+Canonical:  
 ```bash
-git clone https://github.com/user/dhk-align
-cd dhk-align
-npm install
-
-# Backend runs on port 8090 (server tab)
-npm run backend
-
-# Edge Worker runs on ports 8787/8788 (worker tab)
-npm run worker
-
-# Frontend runs on :3000 and calls Worker, never origin
-npm start
+cd ~/Dev/dhkalign
+export EDGE_SHIELD_TOKEN="$(cat infra/edge/.secrets/EDGE_SHIELD_TOKEN)" \
+  EDGE_SHIELD_ENFORCE=1 BACKEND_CACHE_TTL=180
+./scripts/run_server.sh   # backend on http://127.0.0.1:8090
+```
+Legacy/alternative:  
+```bash
+./scripts/server_up.sh
 ```
 
-## What This Solves
-- Foreigners in Bangladesh need authentic phrases, not textbook Bengali
-- "Eta koto?" not "What is the price of this item?"
-- Works offline (no internet bills for basic transliterator‑tion)
-
-## Architecture
-- **Frontend**: React PWA, offline-capable, calls Worker, never origin
-- **Backend**: Private origin behind Worker, runs on port 8090
-- **Edge Worker**: KV cache + usage logs, runs on ports 8787/8788, shields backend
-- **Engine**: Phonetic normalization + weighted n-gram matching
-- **Dataset**: 230+ curated phrases (Street Pack + Vendor Pack)
-- **Performance**: 20ms median, 92% accuracy, 60% cache hit rate
-
-## Packs
-- **Street Pack**: Greetings, slang, casual conversation
-- **Vendor Pack**: Shopping, bargaining, transportation
-
-## Screenshots
-[Mobile interface] [Transliterator‑tion flow] [Offline mode]
+**Work tab**  
+```bash
+cd ~/Dev/dhkalign/infra/edge
+BROWSER=false wrangler dev --local --ip 127.0.0.1 --port 8789 --config wrangler.toml
+# Worker on http://127.0.0.1:8789
 ```
 
-### Demo Deployment Strategy
-1. **Frontend**: Deploy to Vercel
-   - Build: `npm run build`
-   - Environment: Set REACT_APP_API_URL for backend Worker URL
-   - Custom domain: dhk-align.com
+**Secrets**  
+- Development secrets are loaded from `infra/edge/.dev.vars`.  
+- Production secrets are managed via Wrangler secrets.
 
-2. **Backend**: Deploy to Railway/Render
-   - FastAPI on port 8090 with /translate and /translate/pro (private origin, API key gate)
-   - Backend is private origin behind Edge Worker
+---
 
-3. **Edge Worker**: Deploy on Cloudflare Worker
-   - Handles all client requests, enforces rate limits, caches, logs usage
-   - Origin hidden behind Worker
+## 🧪 Curl Tests
 
-### Loom Walkthrough Script (90 seconds)
-1. **0-15s**: "This is DHK Align - helps you blend in Bangladesh with authentic Banglish"
-2. **15-30s**: Show transliterator‑tion: "eta koto" → "how much is this" + context explanation
-3. **30-45s**: Demonstrate offline mode (disconnect internet, still works)
-4. **45-60s**: Show slang detection: "pagol naki" → informal warning + usage context
-5. **60-75s**: Quick vendor scenario: "ekto kom den" → bargaining phrase
-6. **75-90s**: "Built with React, works offline, open source. Link in description."
+**Edge health**  
+```bash
+curl -s http://127.0.0.1:8789/edge/health | jq .
+```
 
-## 5. Failure Analysis Document
+**Admin cache stats**  
+```bash
+curl -s -H "x-admin-key: your-admin-key" \
+  http://127.0.0.1:8789/admin/cache_stats | jq .
+```
 
-### What DHK Align Cannot Do (Yet)
+**Admin key management**  
+```bash
+# Add key (POST JSON {"key":"..."})
+curl -X POST -H "x-admin-key: your-admin-key" \
+  -d '{"key":"newkey123"}' http://127.0.0.1:8789/admin/keys/add
 
-#### Current Limitations
-1. **Sarcasm/Tone Detection**
-   - Input: "Ki sundor!" (sarcastic)
-   - Current: "How beautiful!"
-   - Reality: Could mean "How ugly!" depending on tone
+# Check key (GET with ?key=...)
+curl -H "x-admin-key: your-admin-key" \
+  http://127.0.0.1:8789/admin/keys/check?key=newkey123
 
-2. **Regional Dialects**
-   - Covers: Dhaka general, some Sylheti
-   - Missing: Chittagonian, Noakhali, rural variants
-   - Impact: 15-20% accuracy drop outside Dhaka
+# Delete key (POST JSON {"key":"..."})
+curl -X POST -H "x-admin-key: your-admin-key" \
+  -d '{"key":"newkey123"}' http://127.0.0.1:8789/admin/keys/del
+```
 
-3. **Complex Grammar**
-   - Works: Simple phrases, vendor transactions
-   - Fails: Long sentences, complex tenses
-   - Example: "Jodi ami kal Dhaka theke Sylhet jete pari tahole..." (complex conditional)
+**Cache MISS → HIT**  
+```bash
+curl -is -X POST http://127.0.0.1:8789/translate \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | grep CF-Cache-Edge
 
-4. **Cultural Context Depth**
-   - Transliterates words, not cultural meaning
-   - "Mama" → "uncle" (correct)
-   - But misses: When to use it, relationship implications
+curl -is -X POST http://127.0.0.1:8789/translate \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | grep CF-Cache-Edge
+```
 
-5. **Profanity/Sensitive Content**
-   - Deliberately limited profanity dataset
-   - May miss offensive terms or inappropriate usage warnings
+**Bypass edge (backend TTL cache)**  
+```bash
+curl -is -X POST "http://127.0.0.1:8789/translate?cache=no" \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | grep X-Backend-Cache
+```
 
-#### Technical Constraints
-- **Dataset Size**: 230 phrases vs. thousands needed for full coverage
-- **No ML**: Rule-based system, can't learn from usage patterns
-- **Phonetic Variations**: Limited to major pronunciation variants
-- **Context Windows**: Analyzes phrases, not conversations
+---
 
-#### Accuracy by Category
-- **Vendor/Shopping**: 94% (well-covered)
-- **Casual Greetings**: 89% (good coverage)
-- **Street Slang**: 76% (emerging coverage)
-- **Complex Grammar**: 23% (known limitation)
+## 🔐 Security Posture
 
-This honesty builds trust and sets realistic expectations for users and contributors.
+- **Edge shield:** all traffic goes through Cloudflare Worker; origin blocked unless header matches `EDGE_SHIELD_TOKEN` (`x-edge-shield` header).  
+- **Pro API:** `/translate/pro` requires `x-api-key` header for authentication.  
+- **Authentication truth table:**  
+  | Endpoint              | x-edge-shield required | x-api-key required |  
+  |-----------------------|------------------------|--------------------|  
+  | Edge Worker           | No (added internally)  | No (free tier)     |  
+  | Pro API (/translate/pro) | Yes                  | Yes                |  
+  | Admin routes          | Yes + x-admin-key       | No                 |  
 
-## Implementation Priority
-1. **Week 1**: Dataset schema + 50 unit tests
-2. **Week 2**: Benchmark framework + gold set
-3. **Week 3**: E2E tests + CI setup
-4. **Week 4**: Demo deployment + documentation polish
+  *x-edge-shield is internal: added by the Worker when it calls origin; end‑users never send it.*
 
-Each deliverable is standalone and testable. No dependencies on external approvals.
+- **Rate limiting:**  
+  - Edge Worker enforces daily per-API-key quotas.  
+  - Origin applies IP-level rate limiting (60 requests/min) using SlowAPI.  
+- **CORS:** enforced on all incoming requests.  
+- **Two-layer caching:**  
+  - Edge cache keyed by HTTP method + path + request body.  
+  - Query parameter `?cache=no` bypasses edge cache and hits backend directly, which returns `X-Backend-Cache: HIT|MISS`.  
+- **Audit logs:** append-only HMAC JSONL, no user text stored.  
+- **Stripe webhook:** requires `stripe-signature` header with 5-minute tolerance, only accepts `checkout.session.completed` events, replay attacks prevented via KV replay lock.  
+- **Billing key endpoint:** `/billing/key` returns key once per request, origin allowlisted for security.
 
-## 6. Security Integration (Added Posture)
-- **Hidden backend**: Private origin behind Edge Worker, accessed only through Cloudflare Worker.
-- **Edge Worker shield**: Enforces rate-limits, allowlist paths, and hides origin.
-- **Audit logging**: All bad requests, rate-limits, and auth failures recorded in HMAC‑signed JSONL (`private/audit/security.jsonl`).
-- **Backups**: Nightly cron jobs, stored locally only.
-- **Edge cache**: KV store caches frequent queries and logs usage for analytics.
+---
+
+## 📂 Repo Structure
+
+See [repo-structure.txt](repo-structure.txt) for a clean tree view.
+
+---
+
+## 📚 Documentation
+
+For detailed docs, see the [docs/](docs/) folder:
+
+- [Architecture](docs/ARCHITECTURE.md)  
+- [Security](docs/SECURITY.md)  
+- [Security Runbook](docs/SECURITY_RUNBOOK.md)  
+- [Privacy](docs/PRIVACY.md)  
+- [Execution Deliverables](docs/EXECUTION_DELIVERABLES.md)  
+- [Contributing](docs/CONTRIBUTING.md)  
+- [Next TODO](docs/NEXT_TODO.md)  
+
+For internal ops and sensitive details, see `private/docs/README_secured_MVP.md` (not part of public GitHub).
+
+---
+
+## 🔄 Free vs Pro Split
+
+- **Free tier:** client-side React SPA with safe data, no API key required, limited to free packs.  
+- **Pro tier:** API-key gated endpoints (`/translate/pro`), supports premium packs via `{"pack":"..."}` in request body, usage tracked and rate-limited.
+
+---
+
+## 🌐 Environment Variables
+
+- `EDGE_SHIELD_TOKEN` — secret token to authenticate origin requests to backend.  
+- `EDGE_SHIELD_ENFORCE` — enable enforcement of edge shield token.  
+- `BACKEND_CACHE_TTL` — TTL for backend cache in seconds.  
+- `CORS_ORIGINS` — allowed origins for CORS.  
+- Worker secrets managed via Wrangler secrets for production, `infra/edge/.dev.vars` for development.
+
+---
+
+## 🛠 Troubleshooting Cheatsheet
+
+| Symptom                          | Possible Cause                         | Fix                                             |
+|---------------------------------|--------------------------------------|-------------------------------------------------|
+| Worker returns 403 on origin call| Missing or invalid `x-edge-shield`   | Set correct `EDGE_SHIELD_TOKEN`; enable enforcement|
+| Admin API calls fail with 401    | Missing or invalid `x-admin-key`     | Provide correct admin key in header              |
+| Rate limit exceeded error        | Too many requests per API key or IP  | Wait for quota reset or reduce request rate      |
+| Cache not hitting (always MISS) | Request differs in method/path/body  | Ensure identical requests; avoid `?cache=no` unless intended |
+| Stripe webhook fails             | Missing or invalid `stripe-signature`| Verify webhook secret and timestamp tolerance    |
+| Billing key endpoint unauthorized| Request from non-allowlisted origin  | Ensure request comes from allowlisted IP or Worker|
+
+---
+
+## 🗂 Production Cutover Checklist
+
+1. Set `ORIGIN_BASE_URL` environment variable correctly.  
+2. Configure Wrangler secrets with production keys (`EDGE_SHIELD_TOKEN`, `ADMIN_KEY`, API keys).  
+3. Deploy Worker with `wrangler publish`.  
+4. Configure Stripe webhook endpoint and secret in Stripe dashboard.  
+5. Verify admin and API keys work as expected.  
+6. Confirm rate limiting and caching behavior in production.  
+7. Schedule backups and audit log monitoring.
+
+---
+
+## 📄 License & Contact
+
+- **Code:** MIT License. See `LICENSE_CODE.md` file.  
+- **Data:** Proprietary license. See `LICENSE_DATA.md` file.
+
+Contact:  
+- Info: [info@dhkalign.com](mailto:info@dhkalign.com)  
+- Security: [admin@dhkalign.com](mailto:admin@dhkalign.com)
