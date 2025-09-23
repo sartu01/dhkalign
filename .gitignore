@@ -81,3 +81,8 @@ infra/edge/.dev.vars
 stripecli.tar.gz
 wraith_*.sh
 repo_*.txt
+
+# edge config noise
+infra/edge/wrangler.min.toml
+infra/edge/wrangler.toml.bak
+infra/edge/wrangler.toml.broken.*
