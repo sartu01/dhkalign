@@ -1,22 +1,20 @@
 import { handleStripeWebhook } from './stripe.js';
 
-<<<<<<< HEAD
 // --- WRAITH JSON + quota helpers ---
 function j(ok, data = null, error = null, status = 200, extraHeaders = {}) {
   const body = ok ? { ok: true, data } : { ok: false, error };
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json", ...extraHeaders }
-  });
+  const h = new Headers({ 'content-type': 'application/json', ...extraHeaders });
+  addCors(h);
+  return new Response(JSON.stringify(body), { status, headers: h });
 }
 
 async function enforceQuota(request, env) {
-  const key = request.headers.get('x-api-key') || "";
-  if (!key) return null;
+  const key = request.headers.get('x-api-key') || '';
+  if (!key) return null; // quota applies to authed calls only
   const today = new Date().toISOString().slice(0, 10);
   const usageKey = `usage:${key}:${today}`;
-  const count = parseInt((await env.USAGE.get(usageKey)) || "0", 10);
-  if (count >= 1000) return j(false, null, "quota_exceeded", 429);
+  const count = parseInt((await env.USAGE.get(usageKey)) || '0', 10);
+  if (count >= 1000) return j(false, null, 'quota_exceeded', 429);
   await env.USAGE.put(usageKey, String(count + 1), { expirationTtl: 60 * 60 * 26 });
   return null;
 }
@@ -31,8 +29,6 @@ function requireAdmin(request, env) {
   return null;
 }
 
-=======
->>>>>>> origin/main
 export default {
   async fetch(request, env, ctx) {
     // CORS preflight
@@ -40,7 +36,6 @@ export default {
 
     const url = new URL(request.url);
 
-<<<<<<< HEAD
     // Global admin guard: lock all /admin/* endpoints behind x-admin-key
     if (url.pathname.startsWith('/admin/')) {
       const guard = requireAdmin(request, env);
@@ -53,16 +48,13 @@ export default {
       if (quotaResp) return quotaResp;
     }
 
-=======
->>>>>>> origin/main
     // Stripe webhook route
     if (url.pathname === '/webhook/stripe' && request.method === 'POST') {
       return await handleStripeWebhook(request, env);
     }
 
-    // Billing key fetch route
+    // Billing key fetch route (one-time, origin-allowlisted)
     if (url.pathname === '/billing/key' && request.method === 'GET') {
-<<<<<<< HEAD
       const origin = request.headers.get('origin') || '';
       const allowed = new Set([
         'https://dhkalign.com',
@@ -85,17 +77,6 @@ export default {
       await env.USAGE.delete(keyName);
 
       return j(true, { api_key });
-=======
-      const session_id = url.searchParams.get('session_id');
-      if (!session_id) {
-        return json({ error: 'missing session_id' }, 400);
-      }
-      const api_key = await env.USAGE.get('session_to_key:' + session_id);
-      if (!api_key) {
-        return json({ error: 'not found' }, 404);
-      }
-      return json({ api_key });
->>>>>>> origin/main
     }
 
     // --- Admin API key management (edge-handled, no forward) ---
@@ -104,9 +85,9 @@ export default {
       const k = url.searchParams.get('key') || '';
       if (!k) return json({ error: 'missing key' }, 400);
       const action = url.pathname.slice('/admin/keys/'.length);
-      if (action === 'add')   { await env.USAGE.put('apikey:' + k, "1"); return json({ ok: true, key: k }); }
+      if (action === 'add')   { await env.USAGE.put('apikey:' + k, '1'); return json({ ok: true, key: k }); }
       if (action === 'del')   { await env.USAGE.delete('apikey:' + k);   return json({ ok: true, key: k }); }
-      if (action === 'check') { const enabled = (await env.USAGE.get('apikey:' + k)) === "1"; return json({ key: k, enabled }); }
+      if (action === 'check') { const enabled = (await env.USAGE.get('apikey:' + k)) === '1'; return json({ key: k, enabled }); }
       return json({ error: 'unknown action' }, 400);
     }
 
@@ -169,7 +150,7 @@ export default {
     const apiKeyHeader = request.headers.get('x-api-key');
     if (url.pathname.startsWith('/translate/pro')) {
       if (!apiKeyHeader) return json({ error: 'x-api-key required' }, 401);
-      const ok = (await env.USAGE.get('apikey:' + apiKeyHeader)) === "1";
+      const ok = (await env.USAGE.get('apikey:' + apiKeyHeader)) === '1';
       if (!ok) return json({ error: 'invalid api key' }, 401);
     }
 
@@ -212,8 +193,8 @@ export default {
     const bodyArr = await originResp.arrayBuffer();
     const resp = new Response(bodyArr, { status, headers: respHeaders });
 
-    // Async usage log (per API key per day; uses DEFAULT when none)
-    const apiKeyForMeter = apiKeyHeader || env.DEFAULT_API_KEY || 'dev';
+    // Async usage log (per API key per day)
+    const apiKeyForMeter = apiKeyHeader || 'free';
     ctx.waitUntil(logDailyUsage(env, apiKeyForMeter, url.pathname));
 
     // KV store on success
