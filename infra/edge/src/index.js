@@ -1,5 +1,6 @@
 import { handleStripeWebhook } from './stripe.js';
 
+<<<<<<< HEAD
 // --- WRAITH JSON + quota helpers ---
 function j(ok, data = null, error = null, status = 200, extraHeaders = {}) {
   const body = ok ? { ok: true, data } : { ok: false, error };
@@ -30,6 +31,8 @@ function requireAdmin(request, env) {
   return null;
 }
 
+=======
+>>>>>>> origin/main
 export default {
   async fetch(request, env, ctx) {
     // CORS preflight
@@ -37,6 +40,7 @@ export default {
 
     const url = new URL(request.url);
 
+<<<<<<< HEAD
     // Global admin guard: lock all /admin/* endpoints behind x-admin-key
     if (url.pathname.startsWith('/admin/')) {
       const guard = requireAdmin(request, env);
@@ -49,6 +53,8 @@ export default {
       if (quotaResp) return quotaResp;
     }
 
+=======
+>>>>>>> origin/main
     // Stripe webhook route
     if (url.pathname === '/webhook/stripe' && request.method === 'POST') {
       return await handleStripeWebhook(request, env);
@@ -56,6 +62,7 @@ export default {
 
     // Billing key fetch route
     if (url.pathname === '/billing/key' && request.method === 'GET') {
+<<<<<<< HEAD
       const origin = request.headers.get('origin') || '';
       const allowed = new Set([
         'https://dhkalign.com',
@@ -78,6 +85,17 @@ export default {
       await env.USAGE.delete(keyName);
 
       return j(true, { api_key });
+=======
+      const session_id = url.searchParams.get('session_id');
+      if (!session_id) {
+        return json({ error: 'missing session_id' }, 400);
+      }
+      const api_key = await env.USAGE.get('session_to_key:' + session_id);
+      if (!api_key) {
+        return json({ error: 'not found' }, 404);
+      }
+      return json({ api_key });
+>>>>>>> origin/main
     }
 
     // --- Admin API key management (edge-handled, no forward) ---
