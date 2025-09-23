@@ -2064,3 +2064,66 @@ DHK Align — Repo Structure (clean view)
 # - Worker forwards to backend with x-edge-shield; KV CACHE/USAGE bound via wrangler.toml.
 # - Backend enforces EDGE_SHIELD_ENFORCE=1; /admin/* requires edge + admin key.
 # - Private assets, DBs, logs, and pro packs are ignored by git per .gitignore.
+# DHK Align — Repo Structure (clean view)
+
+(Noise omitted: node_modules/, .venv/, .DS_Store, _backup/, build artifacts)
+
+.
+├── backend/                      # FastAPI (private origin)
+│   ├── app_sqlite.py             # app + routes (/translate, /translate/pro, /admin/*)
+│   ├── main.py                   # alt entry (may mount limited routes)
+│   ├── security_middleware.py    # validation, headers, rate‑limits, audit hooks
+│   ├── middleware_cache.py       # origin TTL cache (X‑Backend‑Cache)
+│   ├── utils/
+│   │   ├── db_loader.py
+│   │   └── logger.py
+│   ├── scripts/                  # data pipeline
+│   │   ├── normalize_jsonl.py
+│   │   ├── import_clean_jsonl.py
+│   │   ├── export_client_cache.py
+│   │   └── secure_log.py
+│   ├── data/                     # runtime DBs (git‑ignored)
+│   ├── requirements.txt
+│   └── README.md
+├── infra/edge/                   # Cloudflare Worker (edge shield)
+│   ├── src/
+│   │   ├── index.js              # shield + KV cache + usage + admin (+ free GET/POST)
+│   │   └── stripe.js             # webhook: signature verify + replay lock + key mint
+│   └── wrangler.toml             # KV bindings (CACHE, USAGE) + ORIGIN_BASE_URL + vars
+├── frontend/                     # React SPA (free tier UI)
+│   ├── public/
+│   │   └── favicon.ico
+│   └── src/
+│       ├── App.js
+│       ├── index.js
+│       ├── api/
+│       ├── hooks/
+│       └── utils/
+├── private/                      # 🔒 proprietary data (git‑ignored)
+│   ├── pro_packs/                # premium packs (safety ≥ 2)
+│   ├── audit/
+│   └── backups/
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── SECURITY.md
+│   ├── SECURITY_RUNBOOK.md
+│   ├── PRIVACY.md
+│   ├── EXECUTION_DELIVERABLES.md
+│   ├── CONTRIBUTING.md
+│   └── NEXT_TODO.md
+├── scripts/                      # ops scripts
+│   ├── backup_db.sh
+│   ├── restore.sh
+│   └── repo_safety_check.sh
+├── tests/
+│   └── smoke.test.js
+├── e2e/
+│   └── smoke.spec.ts
+├── README.md
+└── repo-structure.txt            # this file (clean view)
+
+# Notes
+# - Frontend calls the Worker (dev: 8789), never the origin directly.
+# - Worker forwards to origin with x‑edge‑shield; KV CACHE/USAGE bound via wrangler.toml.
+# - Backend enforces EDGE_SHIELD_ENFORCE=1 on Pro; /admin/* requires x‑admin‑key.
+# - Private assets, DBs, logs, and pro packs are ignored by git per .gitignore.

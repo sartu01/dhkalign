@@ -10,6 +10,9 @@ class TranslateProReq(BaseModel):
     text: str
     pack: str | None = None
 
+class TranslateReq(BaseModel):
+    text: str
+
 
 def connect():
     conn = sqlite3.connect(DB, timeout=5.0, isolation_level=None)
@@ -57,3 +60,32 @@ def translate_pro(req: TranslateProReq):
         raise HTTPException(status_code=404, detail="Pro translation not found")
 
     return {"src": req.text, "dst": row[0], "tier": "pro", "pack": req.pack}
+
+
+@router.post("/translate")
+def translate(req: TranslateReq):
+    text = (req.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text required")
+    if not DB.exists():
+        raise HTTPException(status_code=500, detail="DB missing")
+
+    conn = connect(); cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT english FROM translations
+            WHERE (banglish=? OR lower(banglish)=lower(?))
+              AND COALESCE(safety_level,1) <= 1
+            ORDER BY ROWID DESC LIMIT 1
+            """,
+            (text, text)
+        )
+        row = cur.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Free translation not found")
+
+    return {"src": req.text, "dst": row[0], "tier": "free", "pack": None}

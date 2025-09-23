@@ -76,3 +76,13 @@ frontend/src/data/
 .secrets/
 infra/edge/.wrangler/
 infra/edge/.dev.vars
+
+# local junk
+stripecli.tar.gz
+wraith_*.sh
+repo_*.txt
+
+# edge config noise
+infra/edge/wrangler.min.toml
+infra/edge/wrangler.toml.bak
+infra/edge/wrangler.toml.broken.*

@@ -1,7 +1,7 @@
 // src/App.js
 // Main WRAITH application - clean and focused
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslator } from './hooks/useTranslator';
 import { useOffline } from './hooks/useOffline';
 import TranslateInput from './components/TranslateInput';

@@ -1,206 +1,174 @@
-# Contributing to DHK Align (Transliterator‑tion)
+# DHK Align — Contributing Guide
 
-This guide explains how to propose changes to **DHK Align — the first Banglish ⇄ English Transliterator‑tion engine**. Keep **privacy**, **security**, **performance**, and **cultural fidelity** at the core. 
-
-> **Posture:** Free tier prefers local/browser processing. The backend origin is **private** and only reachable via the **Cloudflare Worker** (ports 8787/8788). Pro features are **API‑key gated**. Do **not** commit private packs, `.env`, or the SQLite DB.
-
-**Quick Nav:** Getting Started · Making Changes · Code Style · Testing · Submitting PRs · Security · Code of Conduct
-
-Thank you for helping the Bengali community access better transliterator‑tion tooling. 🌍
+Thanks for helping build DHK Align. This guide tells you how to run the stack locally, how we keep the repo secure, how to contribute code/data safely, and the checks to run before you open a PR.
 
 ---
 
-## 🎯 Ways to Contribute
-
-### For Everyone
-- **🐛 Report bugs** and edge cases
-- **💡 Suggest features** (see Roadmap in README)
-- **📝 Improve dataset** (safe phrases, context, spelling variants)
-- **📚 Improve docs** (clarify steps, fix typos, examples)
-- **🌐 Localization** (interface copy)
-
-### For Developers
-- **🔧 Fix issues** (`good-first-issue`)
-- **✨ Add features** (see Roadmap)
-- **⚡ Performance** (client cache, server TTL cache)
-- **🧪 Tests** (frontend + backend)
-- **🔒 Security** (middleware hardening, Worker rules)
-
-### For Linguists
-- **📖 Transliterator-tion accuracy** (standard forms + English gloss)
-- **🗣️ Dialects** (Sylheti/Chittagonian modules)
-- **📚 Cultural context** (usage notes)
+## 🔒 Ground rules (read first)
+- **Edge‑only ingress.** Clients call the **Cloudflare Worker**; only the Worker calls the private origin with the **internal** header `x-edge-shield`. Clients never send this header.
+- **Secrets.** Dev secrets live in `infra/edge/.dev.vars`. Prod secrets are Wrangler secrets. **Never** commit secrets to git.
+- **Admin guard.** All `/admin/*` endpoints require `x-admin-key`.
+- **JSON contract.** Responses are `{ ok:true, data:{...} }` or `{ ok:false, error:"..." }`. No HTML error pages.
+- **One DB path.** Runtime DB = `backend/data/translations.db`.
+- **Identity invariant.** De‑dup at DB level: *(src_lang, roman_bn_norm, tgt_lang, pack)* is unique. `id` is cosmetic.
 
 ---
 
-## 🚀 Getting Started
+## ⚡ Quick Start (Dev, 2 Tabs)
+**Prerequisites**: Python ≥ 3.11, Node ≥ 18, `jq`, `sqlite3`, `cloudflared`, `wrangler` 
 
-### ⏱️ 10‑Minute Quickstart (frontend)
+**Server tab**
 ```bash
-cd frontend
-npm install
-cp .env.example .env
-npm start   # http://localhost:3000
+cd ~/Dev/dhkalign
+# load dev shield token from Worker dev vars
+export EDGE_SHIELD_TOKEN="$(grep -m1 '^EDGE_SHIELD_TOKEN=' infra/edge/.dev.vars | cut -d= -f2)" \
+  EDGE_SHIELD_ENFORCE=1 BACKEND_CACHE_TTL=180
+./scripts/run_server.sh   # backend at http://127.0.0.1:8090
 ```
-Most contributions begin in the React app.
+(Alt) `./scripts/server_up.sh`
 
-> **Public vs Private**  
-> Do **not** commit datasets, private packs, `.env`, or the SQLite DB.  
-> The backend origin remains **hidden** behind the Cloudflare Worker (ports 8787/8788).
-
-### 1) Fork & Clone
+**Work tab (Edge)**
 ```bash
-# Fork on GitHub, then:
-git clone https://github.com/YOUR_USERNAME/dhkalign.git
-cd dhkalign
-# Upstream (official repo)
-git remote add upstream https://github.com/sartu01/dhkalign.git
+cd ~/Dev/dhkalign/infra/edge
+BROWSER=false wrangler dev --local --ip 127.0.0.1 --port 8789 --config wrangler.toml
+# dev Worker at http://127.0.0.1:8789
 ```
 
-### 2) Development Setup
-
-#### Frontend (React)
-```bash
-cd frontend
-npm install
-npm run lint
-cp .env.example .env
-npm start
-```
-Visit http://localhost:3000.
-
-#### Backend (FastAPI, private origin)
-From repo root:
-```bash
-./scripts/run_server.sh   # uvicorn on 127.0.0.1:8090 (private origin)
-curl -s http://127.0.0.1:8090/health | jq .
-```
-**Env:** `backend/.env` (auto‑loaded via `python-dotenv`) — do not commit.
-
-> **Note:** Production calls reach the backend only via the Cloudflare Worker (ports 8787/8788). Direct origin access is disabled in prod.
+**Secrets**
+- Dev secrets: `infra/edge/.dev.vars`  
+- Prod secrets: Wrangler secrets
 
 ---
 
-## 📝 Making Changes
+## 🧪 Curl tests (copy/paste)
 
-**General Rules**
-- Do not commit secrets, API keys, datasets, DB dumps
-- Do not log or upload raw user input; redact at source
-- Keep free tier content **safety_level ≤ 1**; pro content **safety_level ≥ 2**
-- Update docs when behavior/flags change
-
-### Adding Data (Safe Packs)
-
-The public client cache is generated (do **not** edit it directly). To propose additions:
-- Create a JSONL file under `docs/contrib/` with entries like:
-```jsonl
-{"banglish":"kemon acho","translation_en (safe only; pro packs private)":"how are you","transliteration":"kemon acho","safety_level":1}
-{"banglish":"onek dhonnobad","translation_en (safe only; pro packs private)":"thank you very much","transliteration":"onek dhonnobad","safety_level":1}
-```
-- Keep **lowercase banglish**, include common **variants**, and simple **English** gloss.
-- Maintainers will normalize/import and export the safe cache for the frontend.
-
-**Schema (JSONL)**
-- `banglish`: original input (lowercase)
-- `transliteration`: normalized transliteration (if differs)
-- `translation_en (safe only; pro packs private)`: English gloss (safe packs only; pro packs are private)
-- `safety_level`: `1` for free/safe; `≥ 2` reserved for pro packs
-- Optional: `variants[]`, `context_tag`, `region`, `notes`
-
-⚠️ Do not include PII. Only submit content you authored or that is permissibly licensed.
-
-### Code Style
-- **JS/TS:** ESLint + Prettier
-- **Python:** black + flake8 + mypy
-
----
-
-## 🧪 Testing
-
-### Frontend
+**Edge health**
 ```bash
-cd frontend
-npm ci
-npm run lint
-npm test
-npm test -- --coverage --watchAll=false
-npm run build
+curl -s http://127.0.0.1:8789/edge/health | jq .
 ```
 
-### Backend
+**Admin cache stats (locked)**
 ```bash
-cd backend
-# dev deps (if needed)
-pip install -r requirements-dev.txt 2>/dev/null || true
-black . && flake8 . && mypy .
-pytest
+AK=$(grep -m1 '^ADMIN_KEY=' infra/edge/.dev.vars | cut -d= -f2)
+# 401 without header:
+curl -is http://127.0.0.1:8789/admin/cache_stats | sed -n '1,2p'
+# 200 with header:
+curl -is -H "x-admin-key: $AK" http://127.0.0.1:8789/admin/cache_stats | sed -n '1,2p'
 ```
-**Manual API tests**
 
-Use Cloudflare Worker port 8788 for normal calls (production simulation):
+**Admin key management**
 ```bash
-curl -s -X POST http://127.0.0.1:8788/translate \
+# Add key (GET with ?key=...)
+curl -s -H "x-admin-key: $AK" \
+  "http://127.0.0.1:8789/admin/keys/add?key=newkey123" | jq .
+
+# Check key (GET with ?key=...)
+curl -s -H "x-admin-key: $AK" \
+  "http://127.0.0.1:8789/admin/keys/check?key=newkey123" | jq .
+
+# Delete key (GET with ?key=...)
+curl -s -H "x-admin-key: $AK" \
+  "http://127.0.0.1:8789/admin/keys/del?key=newkey123" | jq .
+
+# (Optional) POST JSON is supported if enabled in the Worker:
+# curl -X POST -H "x-admin-key: $AK" -d '{"key":"newkey123"}' http://127.0.0.1:8789/admin/keys/add
+```
+
+**Free**
+```bash
+# POST (canonical)
+curl -sX POST http://127.0.0.1:8789/translate \
   -H 'Content-Type: application/json' \
-  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | jq .
+  -d '{"text":"Bazar korbo"}' | jq
+
+# GET (also supported)
+curl -s 'http://127.0.0.1:8789/translate?q=Bazar%20korbo' | jq
 ```
 
-Use backend port 8090 for direct dev testing:
+**Cache MISS → HIT**
 ```bash
-KEY=$(grep '^API_KEYS=' backend/.env | cut -d= -f2)
-PHRASE=$(sed -n '1p' private/pro_packs/slang/dhk_align_slang_pack_002.CLEAN.jsonl | jq -r .banglish)
-curl -s -X POST http://127.0.0.1:8090/translate/pro \
+curl -is -X POST http://127.0.0.1:8789/translate \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"Bazar korbo"}' | grep CF-Cache-Edge
+
+curl -is -X POST http://127.0.0.1:8789/translate \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"Bazar korbo"}' | grep CF-Cache-Edge
+```
+
+**Bypass edge (backend TTL cache)**
+```bash
+curl -is -X POST "http://127.0.0.1:8789/translate?cache=no" \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"Bazar korbo"}' | grep X-Backend-Cache
+```
+
+**Pro** (mint key → call)
+```bash
+KEY="dev_$(openssl rand -hex 6)"
+curl -s -H "x-admin-key: $AK" "http://127.0.0.1:8789/admin/keys/add?key=$KEY" | jq .
+
+curl -is -X POST http://127.0.0.1:8789/translate/pro \
   -H 'Content-Type: application/json' -H "x-api-key: $KEY" \
-  -d "{\"text\":\"$PHRASE\",\"pack\":\"slang\"}" | jq .
+  -d '{"text":"jam e pore asi"}' | sed -n '1,4p'
 ```
 
 ---
 
-## 📤 Submitting Your Contribution
+## 🧬 Data & schema (no surprises)
+- **Import pipeline:** `normalize_jsonl.py` → `import_clean_jsonl.py`. No ad‑hoc DB edits.
+- **Identity:** unique index on *(src_lang, roman_bn_norm, tgt_lang, pack)* — numbering is decorative.
+- **Free vs Pro:** `safety_level` **≤1** = free, **≥2** = pro.
+- **Release:** export free client cache via `backend/scripts/export_client_cache.py`.
 
-### Branch & Commit
+---
+
+## 🧰 Linting & security checks
+- Python security scan:
 ```bash
-# Sync main
-git checkout main && git pull upstream main
-# Feature branch
-git checkout -b feature/your-feature-name
-# Conventional Commits examples
-feat(frontend): transliterator-tion UI polish
-fix(backend): correct CORS allowlist handling
-security(middleware): add HMAC audit logging on 429
+bandit -r backend/
 ```
-
-### PR Checklist
-- [ ] Tests pass
-- [ ] Docs updated
-- [ ] No secrets committed
-- [ ] Conventional Commit message
-
-All PRs run CI (lint/test/build). Fix locally before pushing.
+- (Optional) add pre‑commit hooks, ruff/black if desired.
 
 ---
 
-## 🔐 Security & Responsible Disclosure
-- Do **not** file public issues for vulnerabilities
-- Email **admin@dhkalign.com** with subject `SECURITY` (include repro steps)
-- We acknowledge within 72 hours and coordinate fixes & disclosure
-- Avoid sharing sensitive logs or user data (HMAC audit logs contain no content)
+## 🔀 Branch & PR expectations
+- **Branch names:** `feat/*`, `fix/*`, `docs/*`, `ops/*`.
+- **Commit signing:** use SSH/GPG signing (required on protected branches).
+- **PR checklist:**
+  - [ ] No secrets in diff (search for `EDGE_SHIELD_TOKEN`, `ADMIN_KEY`, `whsec_`)
+  - [ ] README / SECURITY / ARCH updated if behavior changes
+  - [ ] Dev smoke: free GET+POST, pro with x‑api‑key, admin 401→200
+  - [ ] CI/lint passes (if configured)
 
 ---
 
-## 🤝 Code of Conduct (Short)
-- Be respectful, inclusive, and constructive
-- No harassment or discrimination
-- Report conduct issues to **conduct@dhkalign.com** (or **admin@dhkalign.com**)
+## 🚀 Production cutover (checklist)
+```bash
+# set prod origin in wrangler.toml (default + [env.production]) to https://backend.dhkalign.com
+cd infra/edge
+wrangler secret put ADMIN_KEY --env production
+wrangler secret put EDGE_SHIELD_TOKEN --env production
+wrangler secret put STRIPE_WEBHOOK_SECRET --env production
+wrangler deploy --env production
+```
+- Stripe → endpoint → **Interactive webhook builder** → send `checkout.session.completed` (no signature failures in tail).
 
 ---
 
-## 📚 Useful Links
-- [Root README](../README.md)
-- [Backend README](../backend/README.md)
-- [Security Policy](./SECURITY.md) · [Privacy](./PRIVACY.md)
-- [Next To‑Do](./NEXT_TODO.md)
+## 🛠 Troubleshooting Cheatsheet
+| Symptom                                   | Possible Cause                     | Fix                                                     |
+|-------------------------------------------|------------------------------------|---------------------------------------------------------|
+| Origin returns 403 in logs (Worker→origin) | Missing/invalid `x-edge-shield`    | Set correct EDGE_SHIELD_TOKEN; enable enforcement       |
+| Admin API 401                              | Missing/invalid `x-admin-key`      | Provide correct admin key                                |
+| 429 quota                                  | Daily per‑key quota exceeded       | Wait for reset / reduce request rate                    |
+| Cache always MISS                          | Method/path/body differ             | Send identical requests; avoid `?cache=no` for cache HIT|
+| Stripe 400 signature                       | Wrong `whsec_*` or test/live mismatch | Set correct STRIPE_WEBHOOK_SECRET; verify mode        |
 
-<div align="center">
-  <h3>Thank you for contributing! 🎉</h3>
-  <p>Together we’re building a secure Transliterator‑tion engine for the Bengali community.</p>
-</div>
+---
+
+## 📄 Licenses & Contact
+- **Code:** MIT (see `LICENSE_CODE.md`)  
+- **Data:** Proprietary (see `LICENSE_DATA.md`)
+
+Contact: **admin@dhkalign.com**

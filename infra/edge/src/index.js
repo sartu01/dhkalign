@@ -1,5 +1,38 @@
 import { handleStripeWebhook } from './stripe.js';
 
+<<<<<<< HEAD
+// --- WRAITH JSON + quota helpers ---
+function j(ok, data = null, error = null, status = 200, extraHeaders = {}) {
+  const body = ok ? { ok: true, data } : { ok: false, error };
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", ...extraHeaders }
+  });
+}
+
+async function enforceQuota(request, env) {
+  const key = request.headers.get('x-api-key') || "";
+  if (!key) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  const usageKey = `usage:${key}:${today}`;
+  const count = parseInt((await env.USAGE.get(usageKey)) || "0", 10);
+  if (count >= 1000) return j(false, null, "quota_exceeded", 429);
+  await env.USAGE.put(usageKey, String(count + 1), { expirationTtl: 60 * 60 * 26 });
+  return null;
+}
+// --- end helpers ---
+
+// Require admin guard for /admin/* endpoints
+function requireAdmin(request, env) {
+  const got = request.headers.get('x-admin-key') || '';
+  if (!env.ADMIN_KEY || got !== env.ADMIN_KEY) {
+    return json({ error: 'unauthorized' }, 401);
+  }
+  return null;
+}
+
+=======
+>>>>>>> origin/main
 export default {
   async fetch(request, env, ctx) {
     // CORS preflight
@@ -7,6 +40,21 @@ export default {
 
     const url = new URL(request.url);
 
+<<<<<<< HEAD
+    // Global admin guard: lock all /admin/* endpoints behind x-admin-key
+    if (url.pathname.startsWith('/admin/')) {
+      const guard = requireAdmin(request, env);
+      if (guard) return guard;
+    }
+
+    // per-key daily quota enforcement on translate routes
+    if (url.pathname.startsWith('/translate')) {
+      const quotaResp = await enforceQuota(request, env);
+      if (quotaResp) return quotaResp;
+    }
+
+=======
+>>>>>>> origin/main
     // Stripe webhook route
     if (url.pathname === '/webhook/stripe' && request.method === 'POST') {
       return await handleStripeWebhook(request, env);
@@ -14,6 +62,30 @@ export default {
 
     // Billing key fetch route
     if (url.pathname === '/billing/key' && request.method === 'GET') {
+<<<<<<< HEAD
+      const origin = request.headers.get('origin') || '';
+      const allowed = new Set([
+        'https://dhkalign.com',
+        'https://www.dhkalign.com',
+        'http://127.0.0.1:5173',
+        'http://localhost:5173'
+      ]);
+      if (origin && !allowed.has(origin)) {
+        return j(false, null, 'forbidden', 403);
+      }
+
+      const sid = url.searchParams.get('session_id');
+      if (!sid) return j(false, null, 'missing_session_id', 400);
+
+      const keyName = 'session_to_key:' + sid;
+      const api_key = await env.USAGE.get(keyName);
+      if (!api_key) return j(false, null, 'not_found', 404);
+
+      // one-time: delete mapping after successful read
+      await env.USAGE.delete(keyName);
+
+      return j(true, { api_key });
+=======
       const session_id = url.searchParams.get('session_id');
       if (!session_id) {
         return json({ error: 'missing session_id' }, 400);
@@ -23,13 +95,12 @@ export default {
         return json({ error: 'not found' }, 404);
       }
       return json({ api_key });
+>>>>>>> origin/main
     }
 
     // --- Admin API key management (edge-handled, no forward) ---
     if (url.pathname.startsWith('/admin/keys/')) {
-      if (request.headers.get('x-admin-key') !== env.ADMIN_KEY) {
-        return json({ error: 'unauthorized' }, 401);
-      }
+      // admin guard enforced globally above
       const k = url.searchParams.get('key') || '';
       if (!k) return json({ error: 'missing key' }, 400);
       const action = url.pathname.slice('/admin/keys/'.length);
@@ -46,8 +117,7 @@ export default {
 
     // Admin aggregate health (edge -> origin /health)
     if (url.pathname === '/admin/health') {
-      const key = request.headers.get('x-admin-key');
-      if (!key || key !== env.ADMIN_KEY) return json({ error: 'unauthorized' }, 401);
+      // admin guard enforced globally above
       let origin = { status: 'unknown' };
       try {
         const r = await fetch(new URL('/health', env.ORIGIN_BASE_URL), {
@@ -60,6 +130,39 @@ export default {
         origin = { status: 'down', error: String(e) };
       }
       return json({ status: 'ok', source: 'edge', origin, time: new Date().toISOString() });
+    }
+
+    // Free translate — supports GET ?q=... and POST {text|q}; rewrites to POST { text } before forwarding
+    if (url.pathname === '/translate') {
+      if (request.method === 'OPTIONS') {
+        return cors();
+      }
+
+      let phrase = '';
+      if (request.method === 'GET') {
+        phrase = url.searchParams.get('q') || '';
+        if (!phrase) return json({ ok: false, error: 'missing_query' }, 400);
+      } else if (request.method === 'POST') {
+        try {
+          const raw = await request.text();
+          const body = raw ? JSON.parse(raw) : {};
+          phrase = body.text || body.q || '';
+          if (!phrase) return json({ ok: false, error: 'invalid_json' }, 400);
+        } catch {
+          return json({ ok: false, error: 'invalid_json' }, 400);
+        }
+      } else {
+        return json({ ok: false, error: 'method_not_allowed' }, 405);
+      }
+
+      // Rewrite the incoming request into a POST with JSON body `{ text }` so downstream cache/forward path works unchanged
+      const newHeaders = new Headers(request.headers);
+      newHeaders.set('content-type', 'application/json');
+      const accept = request.headers.get('accept');
+      if (accept) newHeaders.set('accept', accept);
+      const body = JSON.stringify({ text: phrase });
+      request = new Request(request.url, { method: 'POST', headers: newHeaders, body });
+      // fall through to generic caching + forward logic
     }
 
     // API key gating (edge): ONLY for /translate/pro
