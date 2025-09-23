@@ -22,6 +22,7 @@ ALLOWED_ORIGINS = "https://dhkalign.com,https://www.dhkalign.com,http://127.0.0.
 # -----------------------------
 # Production environment config
 # -----------------------------
+# PROD CORS: prod domains only (dev hosts intentionally excluded)
 [env.production.vars]
 ORIGIN_BASE_URL = "https://backend.dhkalign.com"
 REQUIRE_API_KEY = "true"
