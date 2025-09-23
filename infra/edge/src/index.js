@@ -21,12 +21,27 @@ async function enforceQuota(request, env) {
 }
 // --- end helpers ---
 
+// Require admin guard for /admin/* endpoints
+function requireAdmin(request, env) {
+  const got = request.headers.get('x-admin-key') || '';
+  if (!env.ADMIN_KEY || got !== env.ADMIN_KEY) {
+    return json({ error: 'unauthorized' }, 401);
+  }
+  return null;
+}
+
 export default {
   async fetch(request, env, ctx) {
     // CORS preflight
     if (request.method === 'OPTIONS') return cors();
 
     const url = new URL(request.url);
+
+    // Global admin guard: lock all /admin/* endpoints behind x-admin-key
+    if (url.pathname.startsWith('/admin/')) {
+      const guard = requireAdmin(request, env);
+      if (guard) return guard;
+    }
 
     // per-key daily quota enforcement on translate routes
     if (url.pathname.startsWith('/translate')) {
@@ -67,9 +82,7 @@ export default {
 
     // --- Admin API key management (edge-handled, no forward) ---
     if (url.pathname.startsWith('/admin/keys/')) {
-      if (request.headers.get('x-admin-key') !== env.ADMIN_KEY) {
-        return json({ error: 'unauthorized' }, 401);
-      }
+      // admin guard enforced globally above
       const k = url.searchParams.get('key') || '';
       if (!k) return json({ error: 'missing key' }, 400);
       const action = url.pathname.slice('/admin/keys/'.length);
@@ -86,8 +99,7 @@ export default {
 
     // Admin aggregate health (edge -> origin /health)
     if (url.pathname === '/admin/health') {
-      const key = request.headers.get('x-admin-key');
-      if (!key || key !== env.ADMIN_KEY) return json({ error: 'unauthorized' }, 401);
+      // admin guard enforced globally above
       let origin = { status: 'unknown' };
       try {
         const r = await fetch(new URL('/health', env.ORIGIN_BASE_URL), {
@@ -100,6 +112,39 @@ export default {
         origin = { status: 'down', error: String(e) };
       }
       return json({ status: 'ok', source: 'edge', origin, time: new Date().toISOString() });
+    }
+
+    // Free translate — supports GET ?q=... and POST {text|q}; rewrites to POST { text } before forwarding
+    if (url.pathname === '/translate') {
+      if (request.method === 'OPTIONS') {
+        return cors();
+      }
+
+      let phrase = '';
+      if (request.method === 'GET') {
+        phrase = url.searchParams.get('q') || '';
+        if (!phrase) return json({ ok: false, error: 'missing_query' }, 400);
+      } else if (request.method === 'POST') {
+        try {
+          const raw = await request.text();
+          const body = raw ? JSON.parse(raw) : {};
+          phrase = body.text || body.q || '';
+          if (!phrase) return json({ ok: false, error: 'invalid_json' }, 400);
+        } catch {
+          return json({ ok: false, error: 'invalid_json' }, 400);
+        }
+      } else {
+        return json({ ok: false, error: 'method_not_allowed' }, 405);
+      }
+
+      // Rewrite the incoming request into a POST with JSON body `{ text }` so downstream cache/forward path works unchanged
+      const newHeaders = new Headers(request.headers);
+      newHeaders.set('content-type', 'application/json');
+      const accept = request.headers.get('accept');
+      if (accept) newHeaders.set('accept', accept);
+      const body = JSON.stringify({ text: phrase });
+      request = new Request(request.url, { method: 'POST', headers: newHeaders, body });
+      // fall through to generic caching + forward logic
     }
 
     // API key gating (edge): ONLY for /translate/pro

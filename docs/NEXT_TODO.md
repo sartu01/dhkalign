@@ -1,78 +1,98 @@
-# Next To‑Do (Iron‑Clad Phase)
+# DHK Align — Security Run Log (Post‑Incident Notes)
 
-## 1) Edge Shield (Cloudflare Worker + KV)
-**Goal:** All traffic is routed through the Cloudflare Worker at `infra/edge/src/index.js`. The worker enforces access control, rate limits, and proxies requests to the private backend. The `wrangler.toml` config includes KV namespaces for `CACHE` and `USAGE` and secrets for `EDGE_SHIELD_TOKEN` and `ADMIN_KEY`.
-
-Setup:
-```bash
-# work tab
-npm i -g wrangler
-cd ~/Dev/dhkalign/infra/edge
-# Configure wrangler.toml with:
-# - kv_namespaces = [{ binding = "CACHE", id = "..." }, { binding = "USAGE", id = "..." }]
-# - [vars] with EDGE_SHIELD_TOKEN and ADMIN_KEY secrets set
-wrangler publish
-```
-
-Smoke test after DNS is pointed:
-```bash
-curl -s https://dhkalign.com/health | jq .
-```
+> One entry per incident. Append new entries to the **top**. Keep timestamps in **UTC**. Link artifacts when possible.
 
 ---
 
-## 2) Admin Health & Cache Stats (ops eyes without SSH)
-**Goal:** `/admin/health` and `/admin/cache_stats` endpoints are available both via the edge and backend, gated by the `x-admin-key` header matching the `ADMIN_KEY` secret.
+## Template (copy/paste for each new incident)
 
-Test:
-```bash
-curl -s https://dhkalign.com/admin/health -H "x-admin-key: $ADMIN_KEY" | jq .
-curl -s https://dhkalign.com/admin/cache_stats -H "x-admin-key: $ADMIN_KEY" | jq .
-```
+**Incident ID:** `YYYYMMDD-<short>`  
+**Date (UTC):** `YYYY‑MM‑DD HH:MM` → `YYYY‑MM‑DD HH:MM`  
+**Environment:** prod | dev  
+**Severity:** Sev‑1 | Sev‑2 | Sev‑3  
+**Status:** Open | Mitigated | Closed
+
+### Summary
+> 2–3 lines. What failed, who/what was impacted.
+
+### Impact
+- Affected routes / customers / latency / error rates.
+
+### Detection
+- How we noticed (monitor, alert, manual report).
+
+### Timeline (UTC)
+- `HH:MM` detected …  
+- `HH:MM` first action …  
+- `HH:MM` fix applied …  
+- `HH:MM` verified …
+
+### Root Cause
+- Short causal chain; include config/code references.
+
+### Fix
+- What changed (config/secret/deploy/rollback). Include exact command(s) if relevant.
+
+### Verification
+- Paste the **smoke** you ran (edge/origin health, free GET+POST 200, pro with key 200/404 JSON, admin 401→200, Stripe bad sig → 400).  
+- Include links to logs / screenshots where useful.
+
+### Prevent / Follow‑ups
+- [ ] Add/adjust alert (describe)  
+- [ ] Add `/metrics` or log sampling (describe)  
+- [ ] Document gap (file/section)  
+- [ ] Test/Playbook update  
+- [ ] Other …
+
+### Artifacts
+- Worker tail snippet: `<link or attached>`  
+- Origin logs: `<link or attached>`  
+- Stripe event IDs: `<evt_…>`  
+- KV keys touched: `usage:<key>:<date>`, `session_to_key:<sid>`, `stripe_evt:<id>`
 
 ---
 
-## 3) Response Cache (reduce duplicate DB hits)
-**Goal:** Two-layer caching strategy:
-- Edge KV cache with `CACHE` namespace, indicated by `CF-Cache-Edge` headers.
-- Backend in-process TTL cache with `X-Backend-Cache` headers.
-Clients can bypass caches with `?cache=no`.
+## 2025‑09‑22 — Example stub (remove once you log a real incident)
+**Incident ID:** 20250922-shield-mismatch  
+**Date (UTC):** 2025‑09‑22 22:10 → 22:26  
+**Environment:** prod  
+**Severity:** Sev‑2  
+**Status:** Closed
 
-Quick check:
-```bash
-curl -s -X POST https://dhkalign.com/translate -H 'Content-Type: application/json' \
-  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' >/dev/null; time \
-curl -s -X POST https://dhkalign.com/translate -H 'Content-Type: application/json' \
-  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' >/dev/null
-```
+### Summary
+Origin returned 403 for `/translate/pro` after Worker deploy; users saw 5xx on Pro calls for ~10 minutes.
 
----
+### Impact
+- Pro route unavailable; free unaffected.
 
-## 4) Usage Tracker (revenue/abuse guardrails)
-**Goal:** Usage counters are tracked per API key daily in the `USAGE` KV namespace with keys like `usage:{api_key}:{YYYYMMDD}`. Periodic export/import to `private/usage.db` for analytics and billing.
+### Detection
+- Manual curl + `wrangler tail --env production` showed 403 from origin.
 
-Check usage counts:
-```bash
-# Use a script or KV explorer to view usage counts per key and day
-```
+### Timeline (UTC)
+- 22:10 detected Worker 530/403  
+- 22:14 identified shield mismatch  
+- 22:19 set correct `EDGE_SHIELD_TOKEN` in Worker + redeployed  
+- 22:26 verified Pro / free OK
 
----
+### Root Cause
+Worker prod secret `EDGE_SHIELD_TOKEN` did not match backend env after deploy.
 
-## 5) Docs + Rule Card (close clean)
-- Update this file with what shipped.
-- Generate **Rule Card** for the session (tabs discipline, paths, logs, backup time).
-- Commit & push docs.
+### Fix
+- Set `EDGE_SHIELD_TOKEN` in Worker prod: `wrangler secret put EDGE_SHIELD_TOKEN --env production`  
+- Restarted backend with the same value.
 
-```bash
-git add docs/NEXT_TODO.md backend/monitoring.py backend/cache_layer.py
-git commit -m "ops: edge/admin/cache plan staged; monitoring + cache scaffolds"
-```
+### Verification
+- `curl -is https://<WORKER_HOST>/edge/health` → 200  
+- Free POST+GET → 200  
+- Pro with key → 200/404 JSON  
+- Admin guard → 401/200  
+- Stripe bad sig → 400
 
----
+### Prevent / Follow‑ups
+- [x] Add prod cutover checklist item: verify shield on Worker + backend  
+- [ ] Add origin `/metrics` (auth failures count)  
+- [ ] Alert on 403 spike from origin
 
-## Later This Week (roadmap)
-- DNS orange‑cloud → Worker front → origin private
-- Add monthly rotation for `API_KEYS`, `ADMIN_KEY`, and `EDGE_SHIELD_TOKEN`
-- Encrypted off‑box backup (manual): zip `private/backups/` to external drive
-- Stripe integration and quota enforcement for `/translate/pro`
-- Regression script: health + free + three pro packs → 200 JSON
+### Artifacts
+- Tail excerpt attached  
+- KV: no changes

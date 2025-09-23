@@ -529,3 +529,137 @@ DHK Align Privacy Team
   <p>Questions? Contact us at <a href="mailto:privacy@dhkalign.com">privacy@dhkalign.com</a></p>
   <p>Alternative contact: <a href="mailto:info@dhkalign.com">info@dhkalign.com</a></p>
 </div>
+# DHK Align — Privacy Notice
+
+**Effective date:** 2025‑09‑22
+
+This Privacy Notice explains what we collect, how we use it, and the choices you have when using DHK Align’s translation services (the “Service”). We design the stack to minimize data collection and keep the origin private behind an edge gateway.
+
+---
+
+## Quick summary (plain language)
+- We **do not sell** your data.
+- We **do not** store translation text by default.
+- Payment is handled by **Stripe**; we never see card numbers.
+- For paid users, we mint an **API key** and keep minimal metadata to operate the Service.
+- Clients talk to the **Edge Worker**; the Worker calls the origin with an **internal** header (`x‑edge‑shield`). Clients never send this header.
+
+---
+
+## What we collect
+
+### 1) Service telemetry (required to run the Service)
+- **Usage counters** (KV): per‑API‑key daily counts (e.g., `usage:<key>:YYYY‑MM‑DD`).
+- **Cache metadata**: whether a request was a cache **HIT/MISS** at the edge and/or origin.
+- **Timestamps** and **route** names (e.g., `/translate`, `/translate/pro`).
+- **Administrative events**: key created/checked/deleted via admin routes (no plaintext key returned except at issuance).
+
+> If origin IP rate‑limits (SlowAPI) are enabled, the origin briefly evaluates IPs solely to enforce limits; we avoid persisting IPs longer than necessary for that purpose.
+
+### 2) Billing (only for paid users)
+- **Stripe events** for checkout and key issuance: event id, timestamp, status.
+- **Email** (if provided by Stripe) — used to associate a plan with your API key and for receipts/support.
+- **API key metadata**: plan, issuedAt, eventId, optional email.
+
+> We do **not** process card numbers. Card data never touches our servers.
+
+### 3) Client‑side storage
+- **LocalStorage** may store your **API key** on your device so the client can call the edge. You can clear it at any time.
+
+### 4) Optional logs
+- For debugging, we may enable short‑lived origin logs (status codes, timing). We avoid logging full translation text. Security/audit logs may include admin actions and key issuance.
+
+---
+
+## What we do **not** collect by default
+- No behavioral analytics beacons on product pages.
+- No microphone/camera recording or precise geolocation.
+- No account is required for the free tier.
+
+---
+
+## How we use the data
+- **Operate the Service**: authenticate requests, enforce quotas/rate‑limits, translate, and serve cached results.
+- **Billing**: process Stripe webhooks to mint/activate API keys upon successful checkout.
+- **Security**: detect abuse (quota exceedance, replay attempts, invalid signatures), and protect the origin.
+- **Support**: respond to user inquiries and troubleshoot issues.
+
+### Legal bases (GDPR)
+- **Contract** (Art. 6(1)(b)): providing the Service you request; generating an API key after payment.
+- **Legitimate interests** (Art. 6(1)(f)): abuse prevention, security, and reliability.
+- **Consent** (Art. 6(1)(a)): only if we introduce optional cookies/analytics in the future (none by default).
+
+---
+
+## Data retention
+- **Edge usage counters (KV)**: rolling **30–35 days** (per‑day keys expire automatically).
+- **`session_to_key:<sessionId>` mapping**: **7 days** TTL; deleted on first successful read of `/billing/key`.
+- **Stripe event replay locks**: **90 days**.
+- **API key enable flags** (`apikey:<key>` = "1") and metadata (`apikey.meta:<key>`): retained until deactivation.
+- **Origin request logs** (if enabled): target **≤ 30 days**.
+- **Security/audit logs**: up to **180 days** for integrity and incident response.
+- **Backups**: via scripts (`scripts/backup_db.sh` / `scripts/restore.sh`); encrypted snapshots may be kept according to business continuity needs.
+
+We prefer shorter retention where feasible and adjust within these windows as we tune operations.
+
+---
+
+## Data sharing and processors
+- **Cloudflare** (Workers, KV, CDN) — edge execution, caching, and transport security.
+- **Stripe** — payments and checkout webhooks. We receive event ids and limited metadata; cards never touch us.
+- **Email provider** — for support/receipts if you contact us.
+
+We do not permit our processors to use your data for their own marketing.
+
+---
+
+## Security measures (summary)
+- **Private origin** behind a Worker; internal shield header (`x‑edge‑shield`) added by the edge.
+- **API key** required for paid route; **admin key** required for admin endpoints.
+- **Daily per‑key quotas** at the edge; optional IP rate‑limits at origin.
+- **CORS allowlist** and strict **CSP** (prod) with Stripe host allowed; dev origins listed separately.
+- **Replay protection** for Stripe (timestamp tolerance + KV dedupe).
+- **Least data**: we minimize logs and avoid storing full text content.
+
+> See `docs/SECURITY.md` for the full threat model and headers.
+
+---
+
+## International transfers
+We operate with **Cloudflare Workers/KV**, which may process data in multiple regions. We limit what we store and use standard contractual protections where applicable.
+
+---
+
+## Your rights
+Depending on your location, you may have rights to access, correct, delete, or receive a copy of your data, and to object to or restrict certain processing.
+
+- **Access/Deletion**: email us from the address associated with your Stripe receipt or include your API key: `admin@dhkalign.com`.
+- **Portability**: we can export your API key metadata and usage counts tied to your key.
+- **Opt‑out of marketing**: we do not send marketing by default; if this changes, you’ll have an opt‑out.
+
+We may need to verify your identity (e.g., via email receipt or API key ownership) before fulfilling requests.
+
+---
+
+## Cookies and local storage
+- We do not set marketing cookies.
+- The client may store your **API key** in **localStorage** so the UI can call the edge; remove it in your browser settings to sign out.
+
+---
+
+## Children
+The Service is not directed to children under 13 (or under 16 in the EU). Do not use the Service if you are below the applicable age of digital consent.
+
+---
+
+## Changes to this notice
+If we make material changes, we will update this page and adjust the effective date. For significant changes (e.g., adding analytics), we will provide reasonable advance notice in‑product.
+
+---
+
+## Contact
+Questions or requests: **admin@dhkalign.com**
+
+DHK Align LLC  
+1910 Pacific Ave, Suite 2000 PMB 1586  
+Dallas, TX 75201, USA

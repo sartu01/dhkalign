@@ -1,218 +1,251 @@
-# DHK Align — Public README
+# DHK Align — Security Runbook (On‑Call)
 
-This is the public-facing README for DHK Align.
+Last updated: 2025‑09‑22
 
-The full **Secured MVP README** with internal architecture and sensitive details has been moved to `private/docs/README_secured_MVP.md` and is **not intended for public GitHub**.
-
-For general documentation, see [docs/](docs/).
-
-# DHK Align — Banglish ⇄ English Transliterator-tion Engine
-
-> **Open-core, security-first transliterator-tion engine.**  
-> Free tier runs client-side with safe data; Pro tier is API-key gated with premium packs.  
+This is the **operational** runbook for on‑call. It assumes the code and docs are up to date (see `docs/SECURITY.md`, `docs/ARCHITECTURE.md`, `README.md`). Use this to triage, fix, and verify incidents quickly.
 
 ---
 
-## 🌟 Overview
-
-- **Frontend:** React SPA (free tier UI, client cache for safe data). The frontend only calls the Edge Worker.
-- **Edge Worker:** Cloudflare Worker is the only ingress in prod/dev.  
-  - KV namespaces:  
-    - `CACHE` — TTL response cache (`CF-Cache-Edge: HIT|MISS`)  
-    - `USAGE` — per-API-key counters (daily quotas)  
-  - Admin routes: `/edge/health`, `/admin/health`, `/admin/cache_stats`, `/admin/keys/add`, `/admin/keys/check`, `/admin/keys/del`
-  - Stripe webhook: `/webhook/stripe` (requires `stripe-signature` header, 5-min tolerance, only `checkout.session.completed` events accepted, replay lock with KV)
-  - Billing key handoff: `/billing/key` (returns key once, origin allowlisted)
-  - CORS enforcement applied.
-- **Backend:** FastAPI (private origin, port 8090) behind the Worker.  
-  - Routes: `/health`, `/translate`, `/translate/pro`  
-  - Backend API requires POST requests with JSON body `{"text":"..."}` (preferred); `{"q":"..."}` may be supported but `text` is recommended. Optional `{"pack":"..."}` for Pro tier.  
-  - TTL cache: adds `X-Backend-Cache: HIT|MISS` when bypassing edge cache (`?cache=no`)  
-  - Audit: HMAC-signed append-only logs (`private/audit/security.jsonl`)  
-  - Canonical DB path: `backend/data/translations.db`  
-  - DB identity guarantee: uniqueness enforced on `(src_lang, roman_bn_norm, tgt_lang, pack)`; `id` is cosmetic only.
+## 0) Golden invariants (do not drift)
+- **Edge‑only ingress.** Clients call the **Cloudflare Worker**; only the Worker calls the private origin with the **internal** header `x‑edge‑shield`. Clients never send this header.
+- **Secrets.** Dev secrets: `infra/edge/.dev.vars`. Prod secrets: Wrangler secrets. No secrets in git.
+- **Admin guard.** All `/admin/*` endpoints require `x‑admin-key`.
+- **Free route.** `/translate` supports **POST `{"text":"…"}`** (canonical) **and** **GET `?q=`**.
+- **Pro route.** `/translate/pro` at the **Edge** requires `x‑api-key`; origin trusts only the shield.
+- **Quotas & RL.** Edge daily per‑key quota (KV). Origin SlowAPI 60/min **only when enabled**.
+- **Caching.** Edge KV → `CF‑Cache‑Edge: HIT|MISS`; origin TTL → `X‑Backend‑Cache: HIT|MISS` (bypass with `?cache=no`).
+- **Stripe.** Verify `stripe‑signature` with 5‑minute tolerance; accept only `checkout.session.completed`; KV replay lock.
+- **DB identity.** Uniqueness on *(src_lang, roman_bn_norm, tgt_lang, pack)*. `id` is cosmetic. Runtime DB = `backend/data/translations.db`.
 
 ---
 
-## ⚡ Quick Start (Dev, 2 Tabs)
+## 1) Fast health checks
+Run from any shell (prod Worker), and dev if relevant.
 
-**Prerequisites**  
-- Python >= 3.11  
-- Node.js >= 18  
-- jq  
-- sqlite3  
-- cloudflared  
-- wrangler
+```bash
+# Worker prod health (expect 200)
+curl -is https://<WORKER_HOST>/edge/health | sed -n '1,2p'
 
-**Server tab**  
-Canonical:  
-```bash
-cd ~/Dev/dhkalign
-export EDGE_SHIELD_TOKEN="$(cat infra/edge/.secrets/EDGE_SHIELD_TOKEN)" \
-  EDGE_SHIELD_ENFORCE=1 BACKEND_CACHE_TTL=180
-./scripts/run_server.sh   # backend on http://127.0.0.1:8090
-```
-Legacy/alternative:  
-```bash
-./scripts/server_up.sh
+# Origin health through tunnel (expect 200)
+curl -is https://backend.dhkalign.com/health | sed -n '1,2p'
 ```
 
-**Work tab**  
+Dev (two tabs):
+```bash
+# Edge dev
+dcd=~/Dev/dhkalign; cd $dcd/infra/edge; BROWSER=false wrangler dev --local --ip 127.0.0.1 --port 8789 --config wrangler.toml
+# Backend dev (app_sqlite on 8090)
+cd ~/Dev/dhkalign; source backend/.venv/bin/activate; \
+EDGE_SHIELD_TOKEN=$(grep -m1 '^EDGE_SHIELD_TOKEN=' infra/edge/.dev.vars | cut -d= -f2) \
+python -m uvicorn backend.app_sqlite:app --host 127.0.0.1 --port 8090 --reload
+```
+
+---
+
+## 2) Common incidents → Runbooks
+
+### A) Worker free route 530 (Upstream connection error)
+**Symptom:** `HTTP 530` from Worker; origin health may fail.
+
+**Cause:** Cloudflare named tunnel not running or mis‑ingress.
+
+**Fix:**
+```bash
+# On backend host (where FastAPI runs)
+# 1) make sure origin is alive locally
+curl -is http://127.0.0.1:8090/health | sed -n '1,2p'
+
+# 2) run tunnel (named)
+cloudflared tunnel list  # note the tunnel name/uuid
+cloudflared tunnel run dhkalign-origin
+# if QUIC flaky: cloudflared tunnel run --protocol http2 dhkalign-origin
+
+# 3) confirm public origin
+curl -is https://backend.dhkalign.com/health | sed -n '1,2p'
+```
+**Persistent:** install LaunchAgent/Service to auto‑run the tunnel on boot.
+
+---
+
+### B) Origin returns 403 in logs (Worker→origin)
+**Symptom:** Worker tail shows 403/401 from origin.
+
+**Cause:** `x‑edge‑shield` mismatch (Worker secret vs backend env) or enforcement disabled.
+
+**Fix:**
+```bash
+# set matching secrets in prod Worker
+dcd=~/Dev/dhkalign/infra/edge; cd $dcd
+wrangler secret put EDGE_SHIELD_TOKEN --env production  # paste the same value used by backend
+wrangler deploy --env production
+```
+Restart backend with the same `EDGE_SHIELD_TOKEN`.
+
+**Verify:**
+```bash
+curl -is https://<WORKER_HOST>/translate?q=ping | sed -n '1,2p'
+```
+
+---
+
+### C) Stripe webhook signature fails (400)
+**Symptom:** Worker tail shows `signature verification failed` on `/webhook/stripe`.
+
+**Cause:** Wrong `whsec_…` in Worker, or Test/Live mismatch.
+
+**Fix:**
 ```bash
 cd ~/Dev/dhkalign/infra/edge
-BROWSER=false wrangler dev --local --ip 127.0.0.1 --port 8789 --config wrangler.toml
-# Worker on http://127.0.0.1:8789
+wrangler secret put STRIPE_WEBHOOK_SECRET --env production   # paste the endpoint's whsec_… from Stripe
+yes | wrangler deploy --env production
 ```
-
-**Secrets**  
-- Development secrets are loaded from `infra/edge/.dev.vars`.  
-- Production secrets are managed via Wrangler secrets.
+Then, in Stripe **Interactive webhook endpoint builder** → send `checkout.session.completed`. Tail logs:
+```bash
+wrangler tail --env production
+```
 
 ---
 
-## 🧪 Curl Tests
+### D) Admin endpoint not locked (200 without header)
+**Symptom:** `/admin/cache_stats` returns 200 with no `x-admin-key`.
 
-**Edge health**  
+**Fix:** Ensure global admin guard in Worker:
+```js
+function requireAdmin(request, env) {
+  const got = request.headers.get('x-admin-key') || '';
+  if (!env.ADMIN_KEY || got !== env.ADMIN_KEY) {
+    return json({ error: 'unauthorized' }, 401);
+  }
+  return null;
+}
+// inside fetch():
+if (url.pathname.startsWith('/admin/')) {
+  const guard = requireAdmin(request, env);
+  if (guard) return guard;
+}
+```
+Restart dev Worker or deploy prod.
+
+**Verify:** 401 without header; 200 with `x-admin-key`.
+
+---
+
+### E) Pro 401 at Edge (with a key)
+**Symptom:** `/translate/pro` returns 401 with `x-api-key`.
+
+**Cause:** Key not in KV (`apikey:<key>` ≠ "1").
+
+**Fix:** Mint a dev key or use billing key handoff.
 ```bash
+AK=$(grep -m1 '^ADMIN_KEY=' infra/edge/.dev.vars | cut -d= -f2)
+KEY="dev_$(openssl rand -hex 6)"
+curl -s -H "x-admin-key: $AK" "http://127.0.0.1:8789/admin/keys/add?key=$KEY" | jq .
+```
+
+---
+
+### F) Free route confusion (405 vs 404)
+- **405** on GET: enable GET in Worker or use POST `{ text }`.
+- **404** on POST: exact‑match miss; use an actual free phrase from DB:
+```bash
+sqlite3 backend/data/translations.db \
+ "SELECT banglish FROM translations WHERE COALESCE(safety_level,1)<=1 AND COALESCE(banglish,'')<>'' LIMIT 1;"
+```
+Then:
+```bash
+PHRASE='...'
+curl -sX POST https://<WORKER_HOST>/translate -H 'content-type: application/json' \
+  -d "{\"text\":\"$PHRASE\"}" | jq
+```
+
+---
+
+## 3) On‑call smoke (dev)
+```bash
+# health
 curl -s http://127.0.0.1:8789/edge/health | jq .
+curl -s http://127.0.0.1:8090/health | jq .
+
+# admin guard
+AK=$(grep -m1 '^ADMIN_KEY=' infra/edge/.dev.vars | cut -d= -f2)
+curl -is http://127.0.0.1:8789/admin/cache_stats | sed -n '1,2p'   # expect 401
+curl -is -H "x-admin-key: $AK" http://127.0.0.1:8789/admin/cache_stats | sed -n '1,2p'   # expect 200
+
+# free (both methods)
+curl -sX POST http://127.0.0.1:8789/translate -H 'content-type: application/json' -d '{"text":"Bazar korbo"}' | jq
+curl -s 'http://127.0.0.1:8789/translate?q=Bazar%20korbo' | jq
+
+# pro (mint key → call)
+KEY="dev_$(openssl rand -hex 6)"
+curl -s -H "x-admin-key: $AK" "http://127.0.0.1:8789/admin/keys/add?key=$KEY" | jq .
+curl -is -X POST http://127.0.0.1:8789/translate/pro -H 'content-type: application/json' -H "x-api-key: $KEY" -d '{"text":"jam e pore asi"}' | sed -n '1,4p'
 ```
 
-**Admin cache stats**  
+---
+
+## 4) Prod smoke
 ```bash
-curl -s -H "x-admin-key: your-admin-key" \
-  http://127.0.0.1:8789/admin/cache_stats | jq .
+# Worker & origin
+curl -is https://<WORKER_HOST>/edge/health | sed -n '1,2p'
+curl -is https://backend.dhkalign.com/health | sed -n '1,2p'
+
+# free (both)
+curl -is -X POST https://<WORKER_HOST>/translate -H 'content-type: application/json' -d '{"text":"Bazar korbo"}' | sed -n '1,2p'
+curl -is 'https://<WORKER_HOST>/translate?q=Bazar%20korbo' | sed -n '1,2p'
+
+# stripe bad sig → 400
+curl -is -X POST https://<WORKER_HOST>/webhook/stripe -H 'stripe-signature: test' -d '{}' | sed -n '1,3p'
 ```
 
-**Admin key management**  
+---
+
+## 5) Secrets & rotations
+- **Prod (Wrangler):**
 ```bash
-# Add key (POST JSON {"key":"..."})
-curl -X POST -H "x-admin-key: your-admin-key" \
-  -d '{"key":"newkey123"}' http://127.0.0.1:8789/admin/keys/add
-
-# Check key (GET with ?key=...)
-curl -H "x-admin-key: your-admin-key" \
-  http://127.0.0.1:8789/admin/keys/check?key=newkey123
-
-# Delete key (POST JSON {"key":"..."})
-curl -X POST -H "x-admin-key: your-admin-key" \
-  -d '{"key":"newkey123"}' http://127.0.0.1:8789/admin/keys/del
+cd ~/Dev/dhkalign/infra/edge
+wrangler secret put ADMIN_KEY --env production
+wrangler secret put EDGE_SHIELD_TOKEN --env production
+wrangler secret put STRIPE_WEBHOOK_SECRET --env production
+wrangler deploy --env production
 ```
+- **Stripe “Roll secret”:** If you rotate signing secret in Stripe, immediately set the new `whsec_…` as `STRIPE_WEBHOOK_SECRET` and deploy, or your webhook will 400.
+- **Dev:** `.dev.vars` → `ADMIN_KEY=…`, `EDGE_SHIELD_TOKEN=…`, `STRIPE_WEBHOOK_SECRET=whsec_…`.
 
-**Cache MISS → HIT**  
+---
+
+## 6) KV operations (quick)
 ```bash
-curl -is -X POST http://127.0.0.1:8789/translate \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | grep CF-Cache-Edge
+# admin key ops
+AK=$(grep -m1 '^ADMIN_KEY=' infra/edge/.dev.vars | cut -d= -f2)
+curl -s -H "x-admin-key: $AK" "http://127.0.0.1:8789/admin/keys/add?key=demo_123" | jq .
+curl -s -H "x-admin-key: $AK" "http://127.0.0.1:8789/admin/keys/check?key=demo_123" | jq .
+curl -s -H "x-admin-key: $AK" "http://127.0.0.1:8789/admin/keys/del?key=demo_123" | jq .
 
-curl -is -X POST http://127.0.0.1:8789/translate \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | grep CF-Cache-Edge
-```
-
-**Bypass edge (backend TTL cache)**  
-```bash
-curl -is -X POST "http://127.0.0.1:8789/translate?cache=no" \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"kemon acho","src_lang":"banglish","dst_lang":"english"}' | grep X-Backend-Cache
+# session → key (simulate Stripe)
+SID="sid_test_$(openssl rand -hex 6)"
+( cd infra/edge && wrangler kv:key put --namespace USAGE "session_to_key:$SID" "demo_123" --local )
 ```
 
 ---
 
-## 🔐 Security Posture
-
-- **Edge shield:** all traffic goes through Cloudflare Worker; origin blocked unless header matches `EDGE_SHIELD_TOKEN` (`x-edge-shield` header).  
-- **Pro API:** `/translate/pro` requires `x-api-key` header for authentication.  
-- **Authentication truth table:**  
-  | Endpoint              | x-edge-shield required | x-api-key required |  
-  |-----------------------|------------------------|--------------------|  
-  | Edge Worker           | No (added internally)  | No (free tier)     |  
-  | Pro API (/translate/pro) | Yes                  | Yes                |  
-  | Admin routes          | Yes + x-admin-key       | No                 |  
-
-  *x-edge-shield is internal: added by the Worker when it calls origin; end‑users never send it.*
-
-- **Rate limiting:**  
-  - Edge Worker enforces daily per-API-key quotas.  
-  - Origin applies IP-level rate limiting (60 requests/min) using SlowAPI.  
-- **CORS:** enforced on all incoming requests.  
-- **Two-layer caching:**  
-  - Edge cache keyed by HTTP method + path + request body.  
-  - Query parameter `?cache=no` bypasses edge cache and hits backend directly, which returns `X-Backend-Cache: HIT|MISS`.  
-- **Audit logs:** append-only HMAC JSONL, no user text stored.  
-- **Stripe webhook:** requires `stripe-signature` header with 5-minute tolerance, only accepts `checkout.session.completed` events, replay attacks prevented via KV replay lock.  
-- **Billing key endpoint:** `/billing/key` returns key once per request, origin allowlisted for security.
+## 7) Logging & monitoring
+- **Worker prod logs:** `wrangler tail --env production`
+- **Origin logs:** Uvicorn/ASGI logs (enable structured logs; avoid full text).
+- **Tunnel logs:** `/tmp/cloudflared.err` (if using LaunchAgent), or foreground output.
+- **Metrics:** (recommended) add `/metrics` Prometheus endpoint on origin (req count, latencies, 4xx/5xx, cache hit rate).
 
 ---
 
-## 📂 Repo Structure
-
-See [repo-structure.txt](repo-structure.txt) for a clean tree view.
-
----
-
-## 📚 Documentation
-
-For detailed docs, see the [docs/](docs/) folder:
-
-- [Architecture](docs/ARCHITECTURE.md)  
-- [Security](docs/SECURITY.md)  
-- [Security Runbook](docs/SECURITY_RUNBOOK.md)  
-- [Privacy](docs/PRIVACY.md)  
-- [Execution Deliverables](docs/EXECUTION_DELIVERABLES.md)  
-- [Contributing](docs/CONTRIBUTING.md)  
-- [Next TODO](docs/NEXT_TODO.md)  
-
-For internal ops and sensitive details, see `private/docs/README_secured_MVP.md` (not part of public GitHub).
+## 8) Post‑incident checklist
+- [ ] Document root cause and the exact fix in `docs/SECURITY_RUN_LOG.md` (or issue).
+- [ ] Verify Worker & origin health, admin guard 401→200, free GET+POST 200, pro auth 200/404 JSON.
+- [ ] If secrets rotated: confirm new secrets are stored in password manager.
+- [ ] If tunnel changed: ensure persistence (LaunchAgent/Service) so it restarts on boot.
 
 ---
 
-## 🔄 Free vs Pro Split
-
-- **Free tier:** client-side React SPA with safe data, no API key required, limited to free packs.  
-- **Pro tier:** API-key gated endpoints (`/translate/pro`), supports premium packs via `{"pack":"..."}` in request body, usage tracked and rate-limited.
-
----
-
-## 🌐 Environment Variables
-
-- `EDGE_SHIELD_TOKEN` — secret token to authenticate origin requests to backend.  
-- `EDGE_SHIELD_ENFORCE` — enable enforcement of edge shield token.  
-- `BACKEND_CACHE_TTL` — TTL for backend cache in seconds.  
-- `CORS_ORIGINS` — allowed origins for CORS.  
-- Worker secrets managed via Wrangler secrets for production, `infra/edge/.dev.vars` for development.
-
----
-
-## 🛠 Troubleshooting Cheatsheet
-
-| Symptom                          | Possible Cause                         | Fix                                             |
-|---------------------------------|--------------------------------------|-------------------------------------------------|
-| Worker returns 403 on origin call| Missing or invalid `x-edge-shield`   | Set correct `EDGE_SHIELD_TOKEN`; enable enforcement|
-| Admin API calls fail with 401    | Missing or invalid `x-admin-key`     | Provide correct admin key in header              |
-| Rate limit exceeded error        | Too many requests per API key or IP  | Wait for quota reset or reduce request rate      |
-| Cache not hitting (always MISS) | Request differs in method/path/body  | Ensure identical requests; avoid `?cache=no` unless intended |
-| Stripe webhook fails             | Missing or invalid `stripe-signature`| Verify webhook secret and timestamp tolerance    |
-| Billing key endpoint unauthorized| Request from non-allowlisted origin  | Ensure request comes from allowlisted IP or Worker|
-
----
-
-## 🗂 Production Cutover Checklist
-
-1. Set `ORIGIN_BASE_URL` environment variable correctly.  
-2. Configure Wrangler secrets with production keys (`EDGE_SHIELD_TOKEN`, `ADMIN_KEY`, API keys).  
-3. Deploy Worker with `wrangler publish`.  
-4. Configure Stripe webhook endpoint and secret in Stripe dashboard.  
-5. Verify admin and API keys work as expected.  
-6. Confirm rate limiting and caching behavior in production.  
-7. Schedule backups and audit log monitoring.
-
----
-
-## 📄 License & Contact
-
-- **Code:** MIT License. See `LICENSE_CODE.md` file.  
-- **Data:** Proprietary license. See `LICENSE_DATA.md` file.
-
-Contact:  
-- Info: [info@dhkalign.com](mailto:info@dhkalign.com)  
-- Security: [admin@dhkalign.com](mailto:admin@dhkalign.com)
+## References
+- Architecture: `docs/ARCHITECTURE.md`
+- Security model: `docs/SECURITY.md`
+- Privacy: `docs/PRIVACY.md`
+- Execution Deliverables: `docs/EXECUTION_DELIVERABLES.md`
