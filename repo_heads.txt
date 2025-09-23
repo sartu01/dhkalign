@@ -1,0 +1,564 @@
+=== wrangler.toml ===
+name = "dhkalign-edge"
+main = "src/index.js"
+compatibility_date = "2025-09-06"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "97e93c549954436f8370f6e7894ad6ef"
+preview_id = "80b3191e204c4632934491dbb70743b7"
+
+[[kv_namespaces]]
+binding = "USAGE"
+id = "d1f0c46aba204abc8fce5de642106a2a"
+preview_id = "a9d2380aee074c678f7cc52220969bc4"
+
+[vars]
+ORIGIN_BASE_URL = "https://world-pattern-webcams-lakes.trycloudflare.com"
+CACHE_TTL_SECONDS = "300"
+REQUIRE_API_KEY = "false"
+DEFAULT_API_KEY = "dev"
+
+
+# -----------------------------
+# Production environment config
+# -----------------------------
+[env.production.vars]
+# TODO: set this to your public backend or tunnel URL before deploy
+ORIGIN_BASE_URL = "https://world-pattern-webcams-lakes.trycloudflare.com"
+REQUIRE_API_KEY = "true"
+CACHE_TTL_SECONDS = "300"
+DEFAULT_API_KEY = ""
+
+# Optional: bind a custom route once your zone is on Cloudflare
+# [env.production]
+# routes = [
+#   { pattern = "api.dhkalign.com/*", zone_name = "dhkalign.com" }
+# ]
+
+[env.production]
+kv_namespaces = [
+  { binding = "CACHE", id = "97e93c549954436f8370f6e7894ad6ef" },
+  { binding = "USAGE", id = "d1f0c46aba204abc8fce5de642106a2a" }
+]
+=== index.js ===
+import { handleStripeWebhook } from './stripe.js';
+
+export default {
+  async fetch(request, env, ctx) {
+    // CORS preflight
+    if (request.method === 'OPTIONS') return cors();
+
+    const url = new URL(request.url);
+
+    // Stripe webhook route
+    if (url.pathname === '/webhook/stripe' && request.method === 'POST') {
+      return await handleStripeWebhook(request, env);
+    }
+
+    // Billing key fetch route
+    if (url.pathname === '/billing/key' && request.method === 'GET') {
+      const session_id = url.searchParams.get('session_id');
+      if (!session_id) {
+        return json({ error: 'missing session_id' }, 400);
+      }
+      const api_key = await env.USAGE.get('session_to_key:' + session_id);
+      if (!api_key) {
+        return json({ error: 'not found' }, 404);
+      }
+      return json({ api_key });
+    }
+
+    // --- Admin API key management (edge-handled, no forward) ---
+    if (url.pathname.startsWith('/admin/keys/')) {
+      if (request.headers.get('x-admin-key') !== env.ADMIN_KEY) {
+        return json({ error: 'unauthorized' }, 401);
+      }
+      const k = url.searchParams.get('key') || '';
+      if (!k) return json({ error: 'missing key' }, 400);
+      const action = url.pathname.slice('/admin/keys/'.length);
+      if (action === 'add')   { await env.USAGE.put('apikey:' + k, "1"); return json({ ok: true, key: k }); }
+      if (action === 'del')   { await env.USAGE.delete('apikey:' + k);   return json({ ok: true, key: k }); }
+      if (action === 'check') { const enabled = (await env.USAGE.get('apikey:' + k)) === "1"; return json({ key: k, enabled }); }
+      return json({ error: 'unknown action' }, 400);
+    }
+
+    // Edge-only health
+    if (url.pathname === '/edge/health') {
+      return json({ status: 'ok', source: 'edge', time: new Date().toISOString() });
+    }
+
+    // Admin aggregate health (edge -> origin /health)
+    if (url.pathname === '/admin/health') {
+      const key = request.headers.get('x-admin-key');
+      if (!key || key !== env.ADMIN_KEY) return json({ error: 'unauthorized' }, 401);
+      let origin = { status: 'unknown' };
+      try {
+        const r = await fetch(new URL('/health', env.ORIGIN_BASE_URL), {
+          headers: { 'x-edge-shield': env.EDGE_SHIELD_TOKEN }
+        });
+        origin = await safeJson(r);
+        origin.status ||= r.ok ? 'ok' : 'error';
+        origin.code = r.status;
+      } catch (e) {
+        origin = { status: 'down', error: String(e) };
+      }
+      return json({ status: 'ok', source: 'edge', origin, time: new Date().toISOString() });
+    }
+
+    // API key gating (edge): ONLY for /translate/pro
+    const apiKeyHeader = request.headers.get('x-api-key');
+    if (url.pathname.startsWith('/translate/pro')) {
+      if (!apiKeyHeader) return json({ error: 'x-api-key required' }, 401);
+      const ok = (await env.USAGE.get('apikey:' + apiKeyHeader)) === "1";
+      if (!ok) return json({ error: 'invalid api key' }, 401);
+    }
+
+    // Caching decision
+    const method = request.method.toUpperCase();
+    const cacheable = url.pathname.startsWith('/translate') && (method === 'GET' || method === 'POST');
+    const bypass = url.searchParams.get('cache') === 'no';
+
+    // KV cache lookup
+    let cacheKey = null;
+    if (cacheable && !bypass) {
+      cacheKey = await cacheKeyFrom(request);
+      const hit = await env.CACHE.get(cacheKey);
+      if (hit) {
+        const obj = JSON.parse(hit);
+        const bytes = Uint8Array.from(atob(obj.body_b64), c => c.charCodeAt(0));
+        const res = new Response(bytes, { status: obj.status, headers: obj.headers });
+        res.headers.set('CF-Cache-Edge', 'HIT');
+        addCors(res.headers);
+        return res;
+      }
+    }
+
+    // Forward to origin with shield header
+    const forwardUrl = new URL(url.pathname + url.search, env.ORIGIN_BASE_URL);
+    const headers = new Headers(request.headers);
+    headers.set('x-edge-shield', env.EDGE_SHIELD_TOKEN);
+    headers.set('host', new URL(env.ORIGIN_BASE_URL).host);
+
+    const init = {
+      method: request.method,
+      headers,
+      body: ['GET', 'HEAD'].includes(method) ? undefined : await request.arrayBuffer(),
+    };
+
+    const originResp = await fetch(forwardUrl, init);
+    const status = originResp.status;
+    const respHeaders = new Headers(originResp.headers);
+    addCors(respHeaders);
+    const bodyArr = await originResp.arrayBuffer();
+    const resp = new Response(bodyArr, { status, headers: respHeaders });
+
+    // Async usage log (per API key per day; uses DEFAULT when none)
+    const apiKeyForMeter = apiKeyHeader || env.DEFAULT_API_KEY || 'dev';
+    ctx.waitUntil(logDailyUsage(env, apiKeyForMeter, url.pathname));
+
+    // KV store on success
+    if (cacheKey && status >= 200 && status < 300) {
+      const ttl = parseInt(env.CACHE_TTL_SECONDS || '300', 10);
+      const storeObj = {
+        status,
+        headers: Object.fromEntries(respHeaders.entries()),
+        body_b64: btoa(String.fromCharCode(...new Uint8Array(bodyArr))),
+      };
+      ctx.waitUntil(env.CACHE.put(cacheKey, JSON.stringify(storeObj), { expirationTtl: ttl }));
+      resp.headers.set('CF-Cache-Edge', 'MISS');
+      resp.headers.set('Cache-Control', `public, max-age=${ttl}`);
+    }
+
+    return resp;
+  }
+};
+
+// ---------- helpers ----------
+function cors() { const h = new Headers(); addCors(h); return new Response(null, { headers: h }); }
+function addCors(h) {
+  h.set('Access-Control-Allow-Origin', '*');
+  h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  h.set('Access-Control-Allow-Headers', 'Content-Type, x-api-key, x-admin-key');
+}
+function json(obj, status = 200) { const h = new Headers({ 'content-type': 'application/json' }); addCors(h); return new Response(JSON.stringify(obj), { status, headers: h }); }
+async function safeJson(r) { try { return await r.json(); } catch { return { raw: await r.text() }; } }
+async function cacheKeyFrom(request) {
+  const url = new URL(request.url);
+  const method = request.method.toUpperCase();
+  let bodyHash = '';
+  if (method === 'POST') {
+    const buf = await request.clone().arrayBuffer();
+    bodyHash = await sha256Hex(new Uint8Array(buf));
+  }
+  const base = `${method}:${url.pathname}?${url.searchParams}${bodyHash ? ':body=' + bodyHash : ''}`;
+  return 'resp:' + await sha256Hex(new TextEncoder().encode(base));
+}
+async function sha256Hex(bytes) {
+  const d = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(d)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+async function logDailyUsage(env, apiKey, path) {
+  try {
+    const now = new Date();
+    const day = now.toISOString().slice(0, 10);
+    const key = `usage:${apiKey}:${day}`;
+    const raw = await env.USAGE.get(key);
+    let data = raw ? JSON.parse(raw) : { count: 0, last: null, paths: {} };
+    data.count += 1;
+    data.last = now.toISOString();
+    data.paths[path] = (data.paths[path] || 0) + 1;
+    await env.USAGE.put(key, JSON.stringify(data), { expirationTtl: 40 * 60 * 60 }); // ~40h
+  } catch {}
+}
+=== stripe.js ===
+// Stripe webhook handler for Cloudflare Workers without Stripe SDK
+
+export async function handleStripeWebhook(request, env) {
+  const sig = request.headers.get('stripe-signature');
+  const body = await request.text();
+
+  if (!sig) {
+    return new Response('Missing stripe-signature header', { status: 400 });
+  }
+
+  const event = await verifyStripeSignature(body, sig, env.STRIPE_WEBHOOK_SECRET);
+  if (!event) {
+    return new Response('Invalid signature', { status: 400 });
+  }
+
+  // Replay protection: check if event id already processed
+  const eventId = event.id;
+  if (!eventId) {
+    return new Response('Missing event id', { status: 400 });
+  }
+
+  const existing = await env.USAGE.get(eventId);
+  if (existing) {
+    // Event already processed
+    return new Response('Event already processed', { status: 200 });
+  }
+
+  // Mark event as processed
+  await env.USAGE.put(eventId, 'processed');
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+
+    // Mint API key and store metadata
+    const apiKey = crypto.randomUUID();
+
+    // Store metadata in KV: for example, store by apiKey with customer info
+    const metadata = {
+      customerId: session.customer,
+      sessionId: session.id,
+      created: Date.now(),
+      status: session.status,
+      plan: session.display_items?.[0]?.plan?.id || null,
+      issuedAt: Date.now(),
+      issuedBy: 'stripe-webhook',
+      eventId: event.id,
+      email: session.customer_details?.email || null,
+    };
+
+    await env.USAGE.put(`apikey:${apiKey}`, JSON.stringify(metadata));
+
+    // Store session to apiKey mapping with TTL 7 days
+    await env.USAGE.put(`session_to_key:${session.id}`, apiKey, { expirationTtl: 7 * 24 * 60 * 60 });
+
+    // Respond with minted API key
+    return new Response(JSON.stringify({ apiKey }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // For other event types, just acknowledge
+  return new Response('Success', { status: 200 });
+}
+
+async function verifyStripeSignature(payload, header, secret) {
+  const parsed = parseStripeSigHeader(header);
+  if (!parsed) return null;
+
+  const { t, signatures } = parsed;
+
+  const signedPayload = `${t}.${payload}`;
+  const expectedSignature = await hmacSHA256Hex(secret, signedPayload);
+
+  for (const sig of signatures) {
+    if (safeEqual(sig, expectedSignature)) {
+      // Parse JSON payload to event object
+      try {
+        return JSON.parse(payload);
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseStripeSigHeader(header) {
+  // Example header: t=timestamp,v1=signature,v1=signature2
+  const parts = header.split(',');
+  let t = null;
+  const signatures = [];
+
+  for (const part of parts) {
+    const [key, value] = part.split('=');
+    if (key === 't') {
+      t = value;
+    } else if (key === 'v1') {
+      signatures.push(value);
+    }
+  }
+
+  if (!t || signatures.length === 0) {
+    return null;
+  }
+
+  return { t, signatures };
+}
+
+async function hmacSHA256Hex(key, msg) {
+  const enc = new TextEncoder();
+  const keyData = enc.encode(key);
+  const msgData = enc.encode(msg);
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
+  return Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function safeEqual(a, b) {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+=== security_middleware.py ===
+from dotenv import load_dotenv; load_dotenv()
+import os, time, re, html, json, hashlib
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+from backend.scripts.secure_log import secure_log
+
+# --- WRAITH trust-edge helper ---
+EDGE_SHIELD_TOKEN = os.getenv("EDGE_SHIELD_TOKEN", "")
+
+def _edge_trusted_header(request):
+    try:
+        return bool(EDGE_SHIELD_TOKEN) and request.headers.get("x-edge-shield") == EDGE_SHIELD_TOKEN
+    except Exception:
+        return False
+# --- END trust-edge helper ---
+
+CORS = [o.strip() for o in os.getenv("CORS_ORIGINS","").split(",") if o.strip()]
+API_KEYS = {k.strip() for k in os.getenv("API_KEYS","").split(",") if k.strip()}
+
+BUCKET = {}               # (ip,fprint) -> timestamps
+FAILED = {}               # ip -> (count, first_ts)
+BLACKLIST = set()
+LIMIT, WINDOW = 60, 60    # 60 req/min per (ip,fprint)
+MAX_BODY = 2048           # 2KB POST cap
+BAN_FAILS, BAN_WINDOW = 5, 300  # 5 bad in 5 min -> temp ban
+
+def _sanitize(s: str) -> str:
+    s = re.sub(r'(--|;|\bUNION\b|\bSELECT\b|\bDROP\b|\bINSERT\b|\bUPDATE\b)', '', s, flags=re.I)
+    s = s.replace('../','').replace('..\\','')
+    return html.escape(s)
+
+def _fp(request):
+    ua = request.headers.get('user-agent','') or ''
+    acc = request.headers.get('accept','') or ''
+    lang= request.headers.get('accept-language','') or ''
+    return hashlib.sha256(f"{ua}|{acc}|{lang}".encode()).hexdigest()[:16]
+
+def _headers(h):
+    h["X-Content-Type-Options"] = "nosniff"
+    h["X-Frame-Options"]        = "DENY"
+    h["Referrer-Policy"]        = "strict-origin-when-cross-origin"
+    h["Content-Security-Policy"]= "default-src 'self'"
+    h["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+def _fail(ip: str):
+    count, first = FAILED.get(ip, (0, time.time()))
+    now = time.time()
+    if now - first > BAN_WINDOW:
+        count, first = 0, now
+    count += 1
+    if count >= BAN_FAILS:
+        BLACKLIST.add(ip)
+        secure_log("temp_ban_set", {"ip": ip}, "ERROR")
+    FAILED[ip] = (count, first)
+
+class SecurityMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        ip = request.client.host if request.client else "unknown"
+        if ip in BLACKLIST:
+            secure_log("temp_ban_block", {"ip": ip}, "ERROR")
+            return JSONResponse({"detail":"Temporarily banned"}, status_code=403)
+
+        # CORS allowlist
+        origin = request.headers.get("origin")
+        if origin and CORS and origin not in CORS:
+            secure_log("cors_block", {"ip": ip, "origin": origin}, "WARN")
+            return JSONResponse({"detail":"CORS blocked"}, status_code=403)
+
+        # Methods / body checks
+        if request.method not in ("GET","POST","OPTIONS"):
+            return JSONResponse({"detail":"Method not allowed"}, status_code=405)
+
+        if request.method == "POST":
+            body = await request.body()
+            if len(body) > MAX_BODY:
+                secure_log("bad_request", {"ip": ip, "reason": "payload_too_large"}, "WARN")
+                return JSONResponse({"detail":"Payload too large"}, status_code=413)
+            if not request.headers.get("content-type","").lower().startswith("application/json"):
+                secure_log("bad_request", {"ip": ip, "reason": "wrong_content_type"}, "WARN")
+                return JSONResponse({"detail":"Content-Type must be application/json"}, status_code=415)
+            # Strict JSON schema
+            try:
+                data = json.loads(body.decode("utf-8"))
+                if not isinstance(data, dict):
+                    raise ValueError("Expected object")
+                txt = data.get("text","")
+                if not isinstance(txt, str) or len(txt) == 0 or len(txt) > 1000:
+                    raise ValueError("Invalid text")
+                data["text"] = _sanitize(txt)
+                request._body = json.dumps(data).encode("utf-8")
+            except Exception as err:
+                _fail(ip)
+                secure_log("bad_request", {"ip": ip, "error": str(err)}, "WARN")
+                return JSONResponse({"detail":"Invalid JSON"}, status_code=400)
+
+        # Rate limit (IP + fingerprint)
+        key = (ip, _fp(request)); now = time.time()
+        bucket = BUCKET.setdefault(key, [])
+        while bucket and bucket[0] < now - WINDOW:
+            bucket.pop(0)
+        if len(bucket) >= LIMIT:
+            secure_log("rate_limited", {"ip": ip}, "WARN")
+            return JSONResponse({"detail":"Rate limit exceeded"}, status_code=429)
+        bucket.append(now)
+
+        # Pro gate (trust edge)
+        if request.url.path.startswith("/translate/pro"):
+            # If request came through the Worker with a valid shield header,
+            # skip origin API_KEYS enforcement and trust the edge.
+            if not _edge_trusted_header(request):
+                api_key = request.headers.get("x-api-key") or request.headers.get(
+                    "authorization", ""
+                ).replace("Bearer ", "")
+                if (not api_key) or (api_key not in API_KEYS):
+                    _fail(ip)
+                    secure_log("auth_fail", {"ip": ip}, "WARN")
+                    return JSONResponse({"detail": "API key required"}, status_code=401)
+
+        resp = await call_next(request)
+        _headers(resp.headers)
+        return resp
+=== pro_routes.py ===
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from pathlib import Path
+import sqlite3
+
+DB = Path(__file__).parent / "data" / "translations.db"
+router = APIRouter()
+
+class TranslateProReq(BaseModel):
+    text: str
+    pack: str | None = None
+
+
+def connect():
+    conn = sqlite3.connect(DB, timeout=5.0, isolation_level=None)
+    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
+
+
+@router.post("/translate/pro")
+def translate_pro(req: TranslateProReq):
+    text = (req.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text required")
+    if not DB.exists():
+        raise HTTPException(status_code=500, detail="DB missing")
+
+    conn = connect(); cur = conn.cursor()
+    try:
+        if req.pack:
+            cur.execute(
+                """
+                SELECT english FROM translations
+                WHERE (banglish=? OR lower(banglish)=lower(?))
+                  AND COALESCE(safety_level,1) >= 2
+                  AND lower(COALESCE(pack,'')) = lower(?)
+                ORDER BY ROWID DESC LIMIT 1
+                """,
+                (text, text, req.pack)
+            )
+        else:
+            cur.execute(
+                """
+                SELECT english FROM translations
+                WHERE (banglish=? OR lower(banglish)=lower(?))
+                  AND COALESCE(safety_level,1) >= 2
+                ORDER BY ROWID DESC LIMIT 1
+                """,
+                (text, text)
+            )
+        row = cur.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Pro translation not found")
+
+    return {"src": req.text, "dst": row[0], "tier": "pro", "pack": req.pack}
+=== model_adapter.py ===
+# Minimal GPT adapter skeleton (WRAITH)
+# Returns None if no provider/secret configured. Real calls should be added later.
+import os
+from typing import Optional
+
+PROVIDER = os.getenv("GPT_PROVIDER", "openai").lower()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+def translate(text: str, src_lang: str, tgt_lang: str) -> Optional[str]:
+    """Return translated text or None if not configured.
+    NOTE: Edge already implements GPT fallback. This backend stub is a no-op placeholder.
+    """
+    return None
+=== server_up.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+# Load secrets and flags
+export EDGE_SHIELD_TOKEN="$(cat .secrets/EDGE_SHIELD_TOKEN)"
+export EDGE_SHIELD_ENFORCE=1
+export BACKEND_CACHE_TTL="${BACKEND_CACHE_TTL:-180}"
+
+# Start FastAPI backend (Uvicorn)
+./scripts/run_server.sh
+=== validate_dataset.py ===
+=== cut_release.py ===
