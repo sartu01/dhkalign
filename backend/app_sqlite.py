@@ -1,6 +1,10 @@
-
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from fastapi.responses import Response
+import time
+from prometheus_client import (
+    CollectorRegistry, Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+)
 import os
 import sqlite3
 from pathlib import Path
@@ -109,6 +113,13 @@ def _insert_pro_auto_row(text: str, translated: str, src_lang: str, tgt_lang: st
         except Exception:
             pass
 
+# Prometheus metrics (process-local)
+METRICS_REGISTRY = CollectorRegistry()
+METRIC_DB_HIT = Counter('dhk_db_hit_total', 'DB hits', ['tier'], registry=METRICS_REGISTRY)
+METRIC_GPT_FALLBACK = Counter('dhk_gpt_fallback_total', 'GPT fallback successes', registry=METRICS_REGISTRY)
+METRIC_GPT_FAIL = Counter('dhk_gpt_fail_total', 'GPT fallback failures', registry=METRICS_REGISTRY)
+METRIC_LATENCY = Histogram('dhk_request_latency_seconds', 'Request latency (seconds)', ['route'], registry=METRICS_REGISTRY)
+
 router = APIRouter()
 
 # Create FastAPI app and mount this router so uvicorn can import backend.app_sqlite:app
@@ -127,114 +138,134 @@ async def _unhandled_any(request, exc):
 async def health():
     return {"ok": True}
 
+@app.get("/metrics")
+async def metrics():
+    data = generate_latest(METRICS_REGISTRY)
+    return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+
 # (router mounted below after route definitions)
 
 #
 # Free translate endpoints (GET/POST). Minimal implementation that avoids 500s.
 @router.get("/translate")
 async def translate_free_get(q: str | None = None):
-    if not q:
-        return JSONResponse({"ok": False, "error": "missing_query"}, status_code=400)
-    hit = _fetch_free_translation(q)
-    if not hit:
-        return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
-    return JSONResponse({"ok": True, "data": {
-        "src": hit.get("banglish") or q,
-        "tgt": hit.get("english"),
-        "src_lang": hit.get("src_lang") or "bn-rom",
-        "tgt_lang": hit.get("tgt_lang") or "en",
-        "pack": hit.get("pack") or "everyday",
-        "source": "db"
-    }})
-
-@router.post("/translate")
-async def translate_free_post(request: Request, text: str | None = None, src_lang: str | None = None, tgt_lang: str | None = None):
-    if not text:
-        try:
-            body = await request.json()
-            if isinstance(body, dict):
-                text = body.get("text") or body.get("q")
-                src_lang = body.get("src_lang") or body.get("src") or src_lang
-                tgt_lang = body.get("tgt_lang") or body.get("tgt") or tgt_lang
-        except Exception:
-            pass
-    if not text:
-        return JSONResponse({"ok": False, "error": "invalid_json"}, status_code=400)
-    hit = _fetch_free_translation(text, src_lang, tgt_lang)
-    if not hit:
-        return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
-    return JSONResponse({"ok": True, "data": {
-        "src": hit.get("banglish") or text,
-        "tgt": hit.get("english"),
-        "src_lang": hit.get("src_lang") or (src_lang or "bn-rom"),
-        "tgt_lang": hit.get("tgt_lang") or (tgt_lang or "en"),
-        "pack": hit.get("pack") or "everyday",
-        "source": "db"
-    }})
-
-
-@router.post("/translate/pro")
-async def translate_pro(request: Request, text: str = None, src_lang: str = None, tgt_lang: str = None):
-    # Parse input from args or JSON body
-    _text = text
-    _src = src_lang
-    _tgt = tgt_lang
-    if not _text:
-        try:
-            body = await request.json()
-            if isinstance(body, dict):
-                _text = body.get("text") or body.get("q")
-                _src = body.get("src_lang") or body.get("src") or _src
-                _tgt = body.get("tgt_lang") or body.get("tgt") or _tgt
-        except Exception:
-            pass
-
-    if not _text:
-        return JSONResponse({"ok": False, "error": "invalid_json"}, status_code=400)
-
-    # Try DB lookup first
-    hit = _fetch_pro_translation(_text, _src, _tgt)
-    if hit:
+    t0 = time.perf_counter()
+    try:
+        if not q:
+            return JSONResponse({"ok": False, "error": "missing_query"}, status_code=400)
+        hit = _fetch_free_translation(q)
+        if not hit:
+            return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
+        METRIC_DB_HIT.labels('free').inc()
         return JSONResponse({"ok": True, "data": {
-            "src": hit.get("banglish") or _text,
+            "src": hit.get("banglish") or q,
             "tgt": hit.get("english"),
-            "src_lang": hit.get("src_lang") or (_src or "bn-rom"),
-            "tgt_lang": hit.get("tgt_lang") or (_tgt or "en"),
+            "src_lang": hit.get("src_lang") or "bn-rom",
+            "tgt_lang": hit.get("tgt_lang") or "en",
             "pack": hit.get("pack") or "everyday",
             "source": "db"
         }})
+    finally:
+        METRIC_LATENCY.labels('/translate').observe(max(time.perf_counter() - t0, 0.0))
 
-    if ENABLE_GPT:
-        # Use gpt_translate if available (returns dict), else translate_fallback (may be str or awaitable)
-        translator = gpt_translate or translate_fallback
-        if not translator:
+@router.post("/translate")
+async def translate_free_post(request: Request, text: str | None = None, src_lang: str | None = None, tgt_lang: str | None = None):
+    t0 = time.perf_counter()
+    try:
+        if not text:
+            try:
+                body = await request.json()
+                if isinstance(body, dict):
+                    text = body.get("text") or body.get("q")
+                    src_lang = body.get("src_lang") or body.get("src") or src_lang
+                    tgt_lang = body.get("tgt_lang") or body.get("tgt") or tgt_lang
+            except Exception:
+                pass
+        if not text:
+            return JSONResponse({"ok": False, "error": "invalid_json"}, status_code=400)
+        hit = _fetch_free_translation(text, src_lang, tgt_lang)
+        if not hit:
             return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
+        METRIC_DB_HIT.labels('free').inc()
+        return JSONResponse({"ok": True, "data": {
+            "src": hit.get("banglish") or text,
+            "tgt": hit.get("english"),
+            "src_lang": hit.get("src_lang") or (src_lang or "bn-rom"),
+            "tgt_lang": hit.get("tgt_lang") or (tgt_lang or "en"),
+            "pack": hit.get("pack") or "everyday",
+            "source": "db"
+        }})
+    finally:
+        METRIC_LATENCY.labels('/translate').observe(max(time.perf_counter() - t0, 0.0))
 
-        english = None
-        try:
-            if inspect.iscoroutinefunction(translator):
-                out = await translator(_text, _src or GPT_SRC_DEFAULT, _tgt or GPT_TGT_DEFAULT)
-            else:
-                out = translator(_text, _src or GPT_SRC_DEFAULT, _tgt or GPT_TGT_DEFAULT)
-            if isinstance(out, dict):
-                english = (out.get("tgt") or "").strip() or None
-            else:
-                english = (out or "").strip() or None
-        except Exception:
-            english = None
+@router.post("/translate/pro")
+async def translate_pro(request: Request, text: str = None, src_lang: str = None, tgt_lang: str = None):
+    t0 = time.perf_counter()
+    try:
+        # Parse input from args or JSON body
+        _text = text
+        _src = src_lang
+        _tgt = tgt_lang
+        if not _text:
+            try:
+                body = await request.json()
+                if isinstance(body, dict):
+                    _text = body.get("text") or body.get("q")
+                    _src = body.get("src_lang") or body.get("src") or _src
+                    _tgt = body.get("tgt_lang") or body.get("tgt") or _tgt
+            except Exception:
+                pass
 
-        if english:
-            _insert_pro_auto_row(_text, english, _src or GPT_SRC_DEFAULT, _tgt or GPT_TGT_DEFAULT)
+        if not _text:
+            return JSONResponse({"ok": False, "error": "invalid_json"}, status_code=400)
+
+        # Try DB lookup first (pro tier)
+        hit = _fetch_pro_translation(_text, _src, _tgt)
+        if hit:
+            METRIC_DB_HIT.labels('pro').inc()
             return JSONResponse({"ok": True, "data": {
-                "src": _text,
-                "tgt": english,
-                "src_lang": _src or GPT_SRC_DEFAULT,
-                "tgt_lang": _tgt or GPT_TGT_DEFAULT,
-                "pack": "gpt_fallback",
-                "source": "gpt"
+                "src": hit.get("banglish") or _text,
+                "tgt": hit.get("english"),
+                "src_lang": hit.get("src_lang") or (_src or "bn-rom"),
+                "tgt_lang": hit.get("tgt_lang") or (_tgt or "en"),
+                "pack": hit.get("pack") or "everyday",
+                "source": "db"
             }})
 
-    return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
+        if ENABLE_GPT:
+            translator = gpt_translate or translate_fallback
+            if translator:
+                english = None
+                try:
+                    if inspect.iscoroutinefunction(translator):
+                        out = await translator(_text, _src or GPT_SRC_DEFAULT, _tgt or GPT_TGT_DEFAULT)
+                    else:
+                        out = translator(_text, _src or GPT_SRC_DEFAULT, _tgt or GPT_TGT_DEFAULT)
+                    if isinstance(out, dict):
+                        english = (out.get("tgt") or "").strip() or None
+                    else:
+                        english = (out or "").strip() or None
+                except Exception:
+                    english = None
+
+                if english:
+                    _insert_pro_auto_row(_text, english, _src or GPT_SRC_DEFAULT, _tgt or GPT_TGT_DEFAULT)
+                    METRIC_GPT_FALLBACK.inc()
+                    return JSONResponse({"ok": True, "data": {
+                        "src": _text,
+                        "tgt": english,
+                        "src_lang": _src or GPT_SRC_DEFAULT,
+                        "tgt_lang": _tgt or GPT_TGT_DEFAULT,
+                        "pack": "gpt_fallback",
+                        "source": "gpt"
+                    }})
+                else:
+                    # fallback attempted but failed
+                    METRIC_GPT_FAIL.inc()
+
+        return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
+    finally:
+        METRIC_LATENCY.labels('/translate/pro').observe(max(time.perf_counter() - t0, 0.0))
 
 # Mount local routes (must run after route definitions)
 app.include_router(router)

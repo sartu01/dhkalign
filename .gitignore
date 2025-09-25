@@ -121,3 +121,8 @@ infra/edge/.dev.vars
 
 infra/edge/.dev.vars
 *.bak.*
+
+# local secrets
+infra/edge/.dev.vars
+# editor/backups
+*.bak.*
