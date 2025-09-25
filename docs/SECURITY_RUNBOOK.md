@@ -12,6 +12,7 @@ This is the **operational** runbook for on‑call. It assumes the code and docs 
 - **Admin guard.** All `/admin/*` endpoints require `x‑admin-key`.
 - **Free route.** `/translate` supports **POST `{"text":"…"}`** (canonical) **and** **GET `?q=`**.
 - **Pro route.** `/translate/pro` at the **Edge** requires `x‑api-key`; origin trusts only the shield.
+- **Pro fallback (optional).** DB‑first → GPT fallback (if enabled) → auto‑insert into DB → serve.
 - **Quotas & RL.** Edge daily per‑key quota (KV). Origin SlowAPI 60/min **only when enabled**.
 - **Caching.** Edge KV → `CF‑Cache‑Edge: HIT|MISS`; origin TTL → `X‑Backend‑Cache: HIT|MISS` (bypass with `?cache=no`).
 - **Stripe.** Verify `stripe‑signature` with 5‑minute tolerance; accept only `checkout.session.completed`; KV replay lock.
@@ -26,7 +27,7 @@ Run from any shell (prod Worker), and dev if relevant.
 # Worker prod health (expect 200)
 curl -is https://<WORKER_HOST>/edge/health | sed -n '1,2p'
 
-# Origin health through tunnel (expect 200)
+# Origin health through Cloudflare → Fly (expect 200)
 curl -is https://backend.dhkalign.com/health | sed -n '1,2p'
 ```
 
@@ -158,6 +159,68 @@ curl -sX POST https://<WORKER_HOST>/translate -H 'content-type: application/json
   -d "{\"text\":\"$PHRASE\"}" | jq
 ```
 
+### G) Pro returns 404 on a miss (fallback expected)
+**Symptom:** 
+
+`/translate/pro` returns 404 for a phrase not in DB, but fallback should have filled it.
+
+**Causes:**
+- `ENABLE_GPT_FALLBACK` is off, or `OPENAI_API_KEY` missing/invalid on Fly.
+- OpenAI call timed out / 429 / 5xx (our handler masks unexpected errors as 404).
+
+**Fix:**
+```bash
+# 1) Verify flags inside Fly (values are hidden)
+flyctl ssh console -a dhkalign-backend -C \
+"python -c \"import os;print('ENABLE=',os.getenv('ENABLE_GPT_FALLBACK'));print('HAS_KEY=',bool(os.getenv('OPENAI_API_KEY')));print('MODEL=',os.getenv('GPT_MODEL'))\""
+
+# 2) (If needed) set secrets and redeploy
+flyctl secrets set -a dhkalign-backend \
+  OPENAI_API_KEY='sk-…' \
+  ENABLE_GPT_FALLBACK='1' \
+  GPT_MODEL='gpt-4o-mini' \
+  GPT_MAX_TOKENS='128' \
+  GPT_TIMEOUT_MS='2000'
+cd ~/Dev/dhkalign && flyctl deploy -a dhkalign-backend
+
+# 3) (Optional) enable lightweight debug for one run
+flyctl secrets set -a dhkalign-backend DEBUG_FALLBACK='1'
+cd ~/Dev/dhkalign && flyctl deploy -a dhkalign-backend
+flyctl logs -a dhkalign-backend &  # then trigger one miss via Worker
+```
+**Verify:** First miss returns `{ ok:true, …, "source":"gpt" }`; repeating the same text returns `{ …, "source":"db" }`.
+
+---
+
+### G) Pro returns 404 on a miss (fallback expected)
+**Symptom:** `/translate/pro` returns 404 for a phrase not in DB, but fallback should have filled it.
+
+**Causes:**
+- `ENABLE_GPT_FALLBACK` is off, or `OPENAI_API_KEY` missing/invalid on Fly.
+- OpenAI call timed out / 429 / 5xx (our handler masks unexpected errors as 404).
+
+**Fix:**
+```bash
+# 1) Verify flags inside Fly (values are hidden)
+flyctl ssh console -a dhkalign-backend -C \
+"python -c \"import os;print('ENABLE=',os.getenv('ENABLE_GPT_FALLBACK'));print('HAS_KEY=',bool(os.getenv('OPENAI_API_KEY')));print('MODEL=',os.getenv('GPT_MODEL'))\""
+
+# 2) (If needed) set secrets and redeploy
+flyctl secrets set -a dhkalign-backend \
+  OPENAI_API_KEY='sk-…' \
+  ENABLE_GPT_FALLBACK='1' \
+  GPT_MODEL='gpt-4o-mini' \
+  GPT_MAX_TOKENS='128' \
+  GPT_TIMEOUT_MS='2000'
+cd ~/Dev/dhkalign && flyctl deploy -a dhkalign-backend
+
+# 3) (Optional) enable lightweight debug for one run
+flyctl secrets set -a dhkalign-backend DEBUG_FALLBACK='1'
+cd ~/Dev/dhkalign && flyctl deploy -a dhkalign-backend
+flyctl logs -a dhkalign-backend &  # then trigger one miss via Worker
+```
+**Verify:** First miss returns `{ ok:true, …, "source":"gpt" }`; repeating the same text returns `{ …, "source":"db" }`.
+
 ---
 
 ## 3) On‑call smoke (dev)
@@ -208,8 +271,11 @@ wrangler secret put EDGE_SHIELD_TOKEN --env production
 wrangler secret put STRIPE_WEBHOOK_SECRET --env production
 wrangler deploy --env production
 ```
+- **Backend (Fly) — GPT fallback (optional):** set `OPENAI_API_KEY`, `ENABLE_GPT_FALLBACK=1`, `GPT_MODEL`, `GPT_MAX_TOKENS`, `GPT_TIMEOUT_MS`, then `flyctl deploy -a dhkalign-backend`.
 - **Stripe “Roll secret”:** If you rotate signing secret in Stripe, immediately set the new `whsec_…` as `STRIPE_WEBHOOK_SECRET` and deploy, or your webhook will 400.
 - **Dev:** `.dev.vars` → `ADMIN_KEY=…`, `EDGE_SHIELD_TOKEN=…`, `STRIPE_WEBHOOK_SECRET=whsec_…`.
+- **Backend (Fly) — GPT fallback (optional):** set 
+`OPENAI_API_KEY`, `ENABLE_GPT_FALLBACK=1`, `GPT_MODEL`, `GPT_MAX_TOKENS`, `GPT_TIMEOUT_MS`, then `flyctl deploy -a dhkalign-backend`.
 
 ---
 

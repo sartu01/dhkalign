@@ -11,6 +11,7 @@ This document captures how we protect DHK Align’s code, data, and runtime prop
 - **Admin guard.** All `/admin/*` endpoints require `x‑admin-key`.
 - **Free route.** `/translate` supports **POST `{"text":"…"}`** (canonical) **and** **GET `?q=`**.
 - **Pro route.** `/translate/pro` at the **Edge** requires `x‑api-key`; origin trusts only the shield.
+- **Pro fallback (optional).** DB‑first → GPT fallback (if enabled) → auto‑insert into DB → serve.
 - **Quotas & RL.** Edge daily per‑key quota (KV). Origin SlowAPI 60/min **only when enabled**.
 - **One‑time key handoff.** `/billing/key?session_id=…` returns once and is origin‑allowlisted.
 - **No text storage by default.** We do not store translation text at the edge; origin logs avoid full text.
@@ -38,6 +39,30 @@ This document captures how we protect DHK Align’s code, data, and runtime prop
 - **CORS/CSP.** Allowlist origins; Stripe host allowed; dev hosts explicit (`127.0.0.1:5173`, `127.0.0.1:8789`).
 - **Caching.** Edge KV (`CF‑Cache‑Edge: HIT|MISS`); origin TTL (`X‑Backend‑Cache: HIT|MISS`), bypass with `?cache=no`.
 - **Stripe.** Signature check (5‑min tolerance), event allowlist (`checkout.session.completed`), KV replay lock; key mint to `apikey:<key>` = "1", metadata at `apikey.meta:<key>`.
+- **Fallback controls (origin).** If enabled, origin calls OpenAI (gpt‑4o‑mini) with strict limits (tokens, timeout, retries); first miss auto‑inserts a pro row, next call is a DB hit. Toggle via Fly secrets.
+
+### Backend (Fly) Environment Variables
+- `OPENAI_API_KEY` — OpenAI key (sk‑…), required only if fallback is enabled
+- `ENABLE_GPT_FALLBACK` — set to `1` to enable GPT fallback on DB miss
+- `GPT_MODEL` — model name (default: `gpt‑4o‑mini`)
+- `GPT_MAX_TOKENS` — max tokens for fallback responses (default: `128`)
+- `GPT_TIMEOUT_MS` — timeout in milliseconds (default: `2000`)
+
+## 🤖 GPT Fallback (optional)
+
+Enable GPT fallback in production so DB misses return a model translation and are auto‑inserted for next time:
+
+```bash
+flyctl secrets set -a dhkalign-backend \
+  OPENAI_API_KEY='sk-…' \
+  ENABLE_GPT_FALLBACK='1' \
+  GPT_MODEL='gpt-4o-mini' \
+  GPT_MAX_TOKENS='128' \
+  GPT_TIMEOUT_MS='2000'
+cd ~/Dev/dhkalign && flyctl deploy -a dhkalign-backend
+```
+
+First miss via `/translate/pro` will return `{ ok:true, data:{ …, "source":"gpt" } }`; repeated calls return `{ …, "source":"db" }` after auto‑insert.
 
 ---
 
@@ -80,6 +105,21 @@ wrangler kv:key delete --namespace USAGE apikey:<KEY>
 - Verify prod endpoint mode (Test vs Live) and `whsec_…` value.
 - Rotate secret if compromised; set new secret in Worker; redeploy.
 
+### E) GPT misuse / cost spike
+**Signal:** Unusual surge of 404→200(GPT) misses; high OpenAI usage; repeated novel phrases.
+
+**Immediate actions:**
+1. **Disable fallback temporarily** (budget pause):
+   ```bash
+   flyctl secrets set -a dhkalign-backend ENABLE_GPT_FALLBACK='0'
+   cd ~/Dev/dhkalign && flyctl deploy -a dhkalign-backend
+   ```
+2. **Lower caps**: reduce `GPT_MAX_TOKENS`, increase `GPT_TIMEOUT_MS` conservatively, or set `GPT_RETRIES=0`.
+3. **Inspect keys**: identify the API key(s) generating most GPT misses; throttle or re‑key.
+4. **Seed packs**: promote frequently GPT‑filled phrases into curated packs to reduce misses.
+
+**Follow‑up:** add monitoring (counts of db_hit / gpt_fallback / gpt_fail) and alerts on spikes.
+
 ---
 
 ## 3) Incident runbooks (copy‑paste)
@@ -117,6 +157,8 @@ if (url.pathname.startsWith('/admin/')) {
   }
 }
 ```
+
+See also: Security Runbook → G) Pro returns 404 on a miss (fallback expected).
 
 ---
 

@@ -13,27 +13,20 @@ id = "d1f0c46aba204abc8fce5de642106a2a"
 preview_id = "a9d2380aee074c678f7cc52220969bc4"
 
 [vars]
-<<<<<<< HEAD
-ORIGIN_BASE_URL = "http://127.0.0.1:8090"
-=======
 ORIGIN_BASE_URL = "https://backend.dhkalign.com"
->>>>>>> origin/main
 CACHE_TTL_SECONDS = "300"
 REQUIRE_API_KEY = "false"
-DEFAULT_API_KEY = "dev"
 ALLOWED_ORIGINS = "https://dhkalign.com,https://www.dhkalign.com,http://127.0.0.1:5173,http://localhost:5173"
-
 
 # -----------------------------
 # Production environment config
 # -----------------------------
+# PROD CORS: prod domains only (dev hosts intentionally excluded)
 [env.production.vars]
-# TODO: set this to your public backend or tunnel URL before deploy
 ORIGIN_BASE_URL = "https://backend.dhkalign.com"
 REQUIRE_API_KEY = "true"
 CACHE_TTL_SECONDS = "300"
-DEFAULT_API_KEY = ""
-ALLOWED_ORIGINS = "https://dhkalign.com,https://www.dhkalign.com,http://127.0.0.1:5173,http://localhost:5173"
+ALLOWED_ORIGINS = "https://dhkalign.com,https://www.dhkalign.com"
 
 # Optional: bind a custom route once your zone is on Cloudflare
 # [env.production]

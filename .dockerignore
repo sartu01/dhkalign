@@ -1,0 +1,12 @@
+# keep image small
+.git
+*.pyc
+__pycache__/
+backend/.venv/
+frontend/node_modules/
+_backup/
+infra/
+Dockerfile*
+fly.toml*
+*.log
+*.out
