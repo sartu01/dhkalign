@@ -93,3 +93,13 @@ infra/edge/wrangler.toml.broken.*
 infra/edge/wrangler.clean
 infra/edge/wrangler.toml.bak.*
 infra/edge/wrangler.toml.conflict.*
+
+infra/edge/.dev.vars
+
+# local secrets
+infra/edge/.dev.vars
+
+# local secrets
+infra/edge/.dev.vars
+# editor/backups
+*.bak.*
