@@ -2,7 +2,9 @@
 
 *Last Updated: September 2025*
 *This policy explains exactly what data we (don’t) collect, why, and how you stay in control.*
+
 See also: **[Security Policy](./SECURITY.md)** for threat model and infrastructure controls.
+> Canonical notice: The “Privacy Notice” at the bottom of this file reflects the current production behavior. The sections above are harmonized to match; any conflict should be resolved in favor of the Privacy Notice.
 
 ## 🎯 Our Privacy Commitment
 
@@ -12,7 +14,7 @@ At DHK Align, **privacy is not a feature, it's our foundation**. We built this s
 
 ### Privacy-First Principles
 
-1. **Free‑first local processing**: Core transliteration runs in your browser. Free-tier users' text is processed locally whenever possible. Free requests may call the private backend or edge for availability/rate‑limit checks, but transliteration content is never stored or persisted.
+1. **No server‑side content retention**: Requests are handled at the edge and origin for availability and rate‑limits, but we do **not** persist translation content server‑side. The client may cache results locally for speed. (See “Pro fallback” for the one optional exception.)
 2. **Minimal Collection**: We only collect what's absolutely necessary
 3. **User Control**: You decide what to share with us
 4. **Full Transparency**: Our code is open source and auditable
@@ -25,7 +27,7 @@ At DHK Align, **privacy is not a feature, it's our foundation**. We built this s
 
 ### What We DON'T Collect (By Default)
 
-- ❌ **Transliteration content**: Your text never leaves your device (for free users; pro users also protected—see below)
+- ❌ **Translation content persistence**: We do **not** retain your text on our servers. Requests transit the edge/origin to deliver a response, but the content isn’t stored server‑side. (If “Pro fallback” is enabled, we store only the minimal pair for that miss—see below.)
 - ❌ **Persistent device identifiers**: No fingerprinting, no unique device IDs stored
 - ❌ **Browser details**: No user agent logging
 - ❌ **Location data**: No geolocation tracking
@@ -36,6 +38,7 @@ At DHK Align, **privacy is not a feature, it's our foundation**. We built this s
 
 ### What We Collect (Minimal)
 
+
 #### Security Events (All Tiers)
 For abuse prevention and availability, the edge (Cloudflare Worker) and the private backend write **tamper‑evident security audit logs**:
 - **What**: event type (e.g., bad request, rate‑limited, auth fail), **IP address**, timestamp, and route accessed (not content).
@@ -43,6 +46,9 @@ For abuse prevention and availability, the edge (Cloudflare Worker) and the priv
 - **Where**: local only, in `private/audit/security.jsonl` (HMAC‑signed, append‑only).
 - **Retention**: up to **90 days**, then rotated; kept offline unless needed for security investigations.
 - **Note**: Edge KV (key-value) storage is **not** used for audit logs or persistent event storage; logs are kept local and short-lived.
+
+#### Pro Fallback (optional)
+If you enable Pro fallback, then **on a DB miss** the backend may call a model (e.g., `gpt‑4o‑mini`) to produce a translation. To prevent repeat calls and reduce cost/latency, we store **only the minimal pair** (input text + model output + langs + pack = `auto`) in the pro dataset. We do **not** store user identifiers with the pair. These pairs are subject to the same deletion rights; contact privacy@dhkalign.com with the text/approximate timestamp and we will remove matching entries.
 
 #### Free Tier Users (Default)
 - **No translation content collected; security events as described above**
@@ -72,8 +78,8 @@ If you explicitly enable analytics in settings:
 
 | Data Type | Purpose | Processing | Retention |
 |-----------|---------|------------|-----------|
-| **Transliterator-tion method used** | Improve engine performance | Anonymous aggregation | 90 days |
-| **Transliterator-tion confidence score** | Quality improvement | Statistical analysis | 90 days |
+| **Translation method used** | Improve engine performance | Anonymous aggregation | 90 days |
+| **Translation confidence score** | Quality improvement | Statistical analysis | 90 days |
 | **Processing time** | Performance optimization | Anonymous metrics | 90 days |
 | **Success/failure rate** | Error reduction | Anonymous statistics | 90 days |
 
@@ -103,7 +109,7 @@ If you submit feedback to improve translations:
   },
   "dhk_align_cache": {
     "kemon_acho": {
-      "transliterator_tion": "how are you",
+      "translation": "how are you",
       "timestamp": 1641234567890,
       "confidence": 1.0
     }
@@ -163,7 +169,7 @@ If you submit feedback to improve translations:
 
 ### Infrastructure Security
 
-- **Hosting**: Privacy-respecting providers (no big tech)
+- **Hosting**: Cloudflare (edge) and Fly.io (origin)
 - **Access**: Principle of least privilege
 - **Monitoring**: No user behavior tracking
 - **Backups**: Encrypted, automated deletion schedules
@@ -358,7 +364,7 @@ We use browser localStorage and sessionStorage for:
 
 ### Our Policy
 
-- **Age requirement**: No minimum age for basic use
+- **Age requirement**: 13+ (16+ in the EU for account features)
 - **Data collection**: Zero data collection by default
 - **Parental consent**: Not required (no data collection)
 - **Educational use**: Safe for schools and students
@@ -377,11 +383,11 @@ We use browser localStorage and sessionStorage for:
 ### Data Location
 
 | Processing Type | Location | Legal Basis |
-|----------------|----------|-------------|
-| **Translation processing** | Your device | User control |
-| **Account data** | EU/EEA servers | GDPR compliance |
-| **Payment processing** | Stripe global infrastructure | Adequate protections |
-| **Backup storage** | EU/EEA only | Data residency |
+|-----------------|----------|-------------|
+| **Edge processing** | Cloudflare global network | Legitimate interests (availability/security) |
+| **Origin (backend)** | Fly.io (primary region: US/IAD; configurable) | Contract necessity |
+| **Payment processing** | Stripe global infrastructure | Contract necessity |
+| **Backup storage** | Fly‑managed volumes (region as configured) | Legitimate interests |
 
 ### Cross-Border Transfers
 

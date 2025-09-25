@@ -93,3 +93,31 @@ infra/edge/.dev.vars
 infra/edge/wrangler.min.toml
 infra/edge/wrangler.toml.bak
 infra/edge/wrangler.toml.broken.*
+
+# edge config noise (backups/scratch)
+infra/edge/wrangler.clean
+infra/edge/wrangler.toml.bak.*
+infra/edge/wrangler.toml.conflict.*
+
+infra/edge/.dev.vars
+
+# local secrets
+infra/edge/.dev.vars
+
+# local secrets
+infra/edge/.dev.vars
+# editor/backups
+*.bak.*
+
+# local secrets
+infra/edge/.dev.vars
+# editor/backups
+*.bak.*
+
+# local secrets
+infra/edge/.dev.vars
+# editor/backups
+*.bak.*
+
+infra/edge/.dev.vars
+*.bak.*
