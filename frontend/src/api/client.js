@@ -1,54 +1,37 @@
-// src/api/client.js
-import { logger } from '../utils/logger';
+const BASE = (import.meta.env.VITE_EDGE_BASE || 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev').replace(/\/+$/, '')
 
-export const API_BASE =
-  (process.env.REACT_APP_API_BASE_URL?.replace(/\/+$/, '') || 'http://localhost:8000') + '/api';
-
-export async function request(path, { method = 'GET', params = {}, body, timeout = 10000 } = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
-
-  const url = new URL(`${API_BASE}${path}`);
-  Object.entries(params || {}).forEach(([k, v]) => {
-    if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
-  });
-
-  const headers = { 'Content-Type': 'application/json' };
-
-  try {
-    logger.debug('api:request', { method, url: url.toString(), hasBody: !!body });
-
-    const res = await fetch(url.toString(), {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
-    });
-
-    const isJson = (res.headers.get('content-type') || '').includes('application/json');
-    const payload = isJson ? await res.json().catch(() => ({})) : await res.text();
-
-    if (!res.ok) {
-      const err = new Error(`HTTP ${res.status}`);
-      err.status = res.status;
-      err.payload = payload;
-      logger.error('api:error', { url: url.toString(), status: res.status, payload });
-      throw err;
-    }
-
-    logger.debug('api:response', { url: url.toString(), status: res.status });
-    return payload;
-  } catch (e) {
-    if (e.name === 'AbortError') {
-      const err = new Error(`Request timeout after ${timeout}ms`);
-      err.code = 'ETIMEOUT';
-      logger.warn('api:timeout', { url: url.toString(), timeout });
-      throw err;
-    }
-    throw e;
-  } finally {
-    clearTimeout(timer);
-  }
+export function getApiKey() {
+  return localStorage.getItem('dhk_api_key') || ''
 }
 
-export default request;
+export async function api(path, opts = {}) {
+  const url = `${BASE}${path.startsWith('/') ? path : '/'+path}`
+  const key = getApiKey()
+  const headers = new Headers(opts.headers || {})
+  headers.set('accept', 'application/json')
+  if (opts.body && !(opts.body instanceof FormData)) headers.set('content-type', 'application/json')
+  if (key) headers.set('x-api-key', key)
+
+  const res = await fetch(url, {
+    method: opts.method || 'GET',
+    headers,
+    body: opts.body
+      ? (opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body))
+      : undefined
+  })
+
+  const text = await res.text()
+  let data = null
+  try { data = text ? JSON.parse(text) : null } catch (_) {}
+
+  if (!res.ok) {
+    // normalize errors; never throw HTML
+    throw (data && typeof data === 'object') ? data : { ok: false, error: 'bad_status', status: res.status, raw: text }
+  }
+  return data
+}
+
+export const get  = (p, h={})          => api(p, { method:'GET',  headers:h })
+export const post = (p, body, h={})     => api(p, { method:'POST', body, headers:h })
+
+export const request = api
