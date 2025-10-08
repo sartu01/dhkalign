@@ -210,7 +210,13 @@ export default {
       body: ['GET', 'HEAD'].includes(method) ? undefined : await request.arrayBuffer(),
     };
 
-    const originResp = await fetch(forwardUrl, init);
+    let originResp;
+    try {
+      originResp = await fetch(forwardUrl, init);
+    } catch (err) {
+      console.error('[edge→origin] fetch failed:', (err && err.message) ? err.message : String(err));
+      return j(false, null, 'internal_error', 502);
+    }
     const status = originResp.status;
     const respHeaders = new Headers(originResp.headers);
     addCors(respHeaders);
