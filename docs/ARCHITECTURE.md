@@ -7,64 +7,108 @@
 
 ## 🌟 Overview
 
-- **Frontend:** React SPA (free tier UI, client cache for safe data). The frontend only calls the Edge Worker.
-- **Edge Worker:** Cloudflare Worker is the only ingress in prod/dev.  
-  - KV namespaces:  
-    - `CACHE` — TTL response cache (`CF-Cache-Edge: HIT|MISS`)  
-    - `USAGE` — per-API-key counters (daily quotas)  
-  - Admin routes: `/edge/health`, `/admin/health`, `/admin/cache_stats`, `/admin/keys/add`, `/admin/keys/check`, `/admin/keys/del`
-  - Stripe webhook: `/webhook/stripe` (requires `stripe-signature` header, 5-min tolerance, only `checkout.session.completed` events accepted, replay lock with KV)
-  - Billing key handoff: `/billing/key` (returns key once, origin allowlisted)
-  - Free translate: "/translate" (POST {"text":"..."} canonical; GET ?q= supported)
-  - Root & favicon: "/" returns minimal JSON; "/favicon.ico" returns 204 (no more noisy 403s)
-  - Admin whoami: "/admin/whoami" (names-only env + origin/kv info; requires x-admin-key)
-  - CORS enforcement applied.
-- **Backend:** FastAPI (private origin, port 8090) behind the Worker.  
-  - Routes: `/health`, `/translate`, `/translate/pro`  
-  - Pro fallback (optional): DB-first → GPT fallback (if enabled) → auto-insert into DB → serve
-  - Metrics: "/metrics" (Prometheus) — db_hit, gpt_fallback, gpt_fail, request latency
-  - Backend API requires POST requests with JSON body `{"text":"..."}` (preferred); `{"q":"..."}` may be supported but `text` is recommended. Optional `{"pack":"..."}` for Pro tier.  
-  - TTL cache: adds `X-Backend-Cache: HIT|MISS` when bypassing edge cache (`?cache=no`)  
-  - Audit: HMAC-signed append-only logs (`private/audit/security.jsonl`)  
-  - Canonical DB path: `backend/data/translations.db`  
-  - DB identity guarantee: uniqueness enforced on `(src_lang, roman_bn_norm, tgt_lang, pack)`; `id` is cosmetic only.
+DHK Align is a secure, open-core translation engine designed for Banglish to English translation and vice versa. It consists of three main components: the Frontend, the Edge Worker, and the Backend. The system is designed for high security, efficient caching, and scalable usage with both free and pro tiers.
 
 ---
 
-## ⚡ Quick Start (Dev, 2 Tabs)
+## 🖥️ Frontend
 
-**Prerequisites**  
-- Python >= 3.11  
-- Node.js >= 18  
-- jq  
-- sqlite3  
-- cloudflared  
-- wrangler
+- **Technology:** React Single Page Application (SPA)  
+- **Purpose:** Provides the user interface for free tier users and caches safe data on the client side.  
+- **Communication:** The frontend communicates exclusively with the Edge Worker and does not talk directly to the backend.  
 
-**Server tab**  
-Canonical:  
-```bash
-cd ~/Dev/dhkalign
-# load dev shield token from Worker dev vars
-export EDGE_SHIELD_TOKEN="$(grep -m1 '^EDGE_SHIELD_TOKEN=' infra/edge/.dev.vars | cut -d= -f2)" \
-  EDGE_SHIELD_ENFORCE=1 BACKEND_CACHE_TTL=180
-./scripts/run_server.sh   # backend on http://127.0.0.1:8090
+---
+
+## 🌐 Edge Worker (Cloudflare Worker)
+
+- **Hosting:** Runs on Cloudflare Workers, serving as the primary ingress point for both production and development environments.  
+- **Responsibilities:**  
+  - Acts as the gateway for all client requests.  
+  - Handles caching, rate limiting, authentication, and routing.  
+  - Enforces CORS policies on incoming requests.  
+- **KV Namespaces:**  
+  - `CACHE` — TTL-based response cache, indicated by `CF-Cache-Edge: HIT|MISS` headers.  
+  - `USAGE` — per-API-key counters for daily quotas.  
+- **Routes and Features:**  
+  - **Health Checks:**  
+    - `/edge/health` — Edge Worker health status.  
+    - `/admin/health` — Admin health endpoint.  
+  - **Admin API:**  
+    - `/admin/cache_stats` — Cache statistics.  
+    - `/admin/keys/add` — Add admin keys.  
+    - `/admin/keys/check` — Check admin keys.  
+    - `/admin/keys/del` — Delete admin keys.  
+    - `/admin/whoami` — Returns environment names and origin/KV info; requires `x-admin-key`.  
+  - **Billing:**  
+    - `/billing/key` — Returns billing key once per request; origin allowlisted for security.  
+  - **Translation:**  
+    - `/translate` (free tier) — POST with JSON `{"text":"..."}` is canonical; GET with `?q=` supported.  
+    - `/translate/pro` — Pro tier endpoint requiring `x-api-key` header for authentication.  
+  - **Stripe Webhook:**  
+    - `/webhook/stripe` — Accepts Stripe webhook events (only `checkout.session.completed`), requires `stripe-signature` header with 5-minute tolerance, and uses KV for replay attack prevention.  
+  - **Miscellaneous:**  
+    - `/` — Returns minimal JSON response.  
+    - `/favicon.ico` — Returns HTTP 204 (no content) to avoid noisy 403 errors.  
+- **Security and Authentication:**  
+  - Origin requests require `x-edge-shield` header matching `EDGE_SHIELD_TOKEN`.  
+  - Admin routes require `x-admin-key`.  
+  - Pro routes require `x-api-key`.  
+  - Clients never send `x-edge-shield`; only the Worker uses it internally when calling the backend.  
+- **Rate Limiting and Quotas:**  
+  - Daily per-API-key quotas are enforced using KV storage.  
+  - CORS is enforced on all requests.  
+- **Caching:**  
+  - Two-layer caching system:  
+    - Edge cache keyed by HTTP method + path + request body.  
+    - Query parameter `?cache=no` bypasses edge cache and hits backend directly.  
+- **Audit Logs:**  
+  - Append-only HMAC-signed logs stored in `private/audit/security.jsonl`.  
+
+---
+
+## 🗄️ Backend (FastAPI on Fly.io)
+
+- **Hosting:** Private origin hosted on Fly.io, running on port 8090.  
+- **Purpose:** Handles translation logic, including database lookups and optional GPT fallback for Pro tier.  
+- **Routes:**  
+  - `/health` — Backend health check.  
+  - `/translate` — Free tier translation endpoint.  
+  - `/translate/pro` — Pro tier translation endpoint requiring `x-edge-shield` header from Worker.  
+  - `/metrics` — Prometheus metrics endpoint.  
+- **Functionality:**  
+  - Supports DB-first translation lookup.  
+  - Optional GPT fallback if enabled (`ENABLE_GPT_FALLBACK=1`), which attempts GPT translation on DB miss, inserts result into DB, and serves it.  
+- **Request Format:**  
+  - Preferred: POST with JSON body `{"text":"..."}`.  
+  - Optional: `{"q":"..."}` may be supported but `text` is recommended.  
+  - Pro tier requests may include `{"pack":"..."}` to specify premium packs.  
+- **Caching:**  
+  - Backend adds `X-Backend-Cache: HIT|MISS` header when edge cache is bypassed (`?cache=no`).  
+- **Database:**  
+  - Canonical DB path: `backend/data/translations.db`.  
+  - Unique constraint enforced on `(src_lang, roman_bn_norm, tgt_lang, pack)`.  
+  - `id` field is cosmetic only.  
+- **Metrics:**  
+  - Exposes metrics such as `dhk_db_hit_total`, `dhk_gpt_fallback_total`, `dhk_gpt_fail_total`, and request latency for monitoring and alerting.  
+
+---
+
+## 📊 System Diagram
+
 ```
-Legacy/alternative:  
-```bash
-./scripts/server_up.sh
+Frontend (React SPA)
+        ↓
+Cloudflare Worker (Edge Worker)
+        ↓
+   Fly.io Backend (FastAPI)
+        ↓
+   Translation DB + GPT Fallback
 ```
 
-**Work tab**  
-```bash
-cd ~/Dev/dhkalign/infra/edge
-BROWSER=false wrangler dev --local --ip 127.0.0.1 --port 8789 --config wrangler.toml
-# Worker on http://127.0.0.1:8789
-```
-
-**Secrets**  
-- Development secrets are loaded from `infra/edge/.dev.vars`.
-- Production secrets are managed via Wrangler secrets.
+- The React SPA sends requests to the Cloudflare Worker, which enforces security, caching, and quotas.  
+- The Worker forwards requests to the Fly.io backend when necessary, adding authentication headers.  
+- The backend serves translations from the database or GPT fallback and returns results with metrics headers.  
+- The Worker caches responses and manages admin and billing endpoints.
 
 ---
 
@@ -99,7 +143,7 @@ curl -H "x-admin-key: your-admin-key" \
 # curl -X POST -H "x-admin-key: your-admin-key" -d '{"key":"newkey123"}' http://127.0.0.1:8789/admin/keys/add
 ```
 
-**Free**
+**Free Translation**  
 ```bash
 # POST (canonical)
 curl -sX POST http://127.0.0.1:8789/translate \
@@ -121,14 +165,14 @@ curl -is -X POST http://127.0.0.1:8789/translate \
   -d '{"text":"Bazar korbo"}' | grep CF-Cache-Edge
 ```
 
-**Bypass edge (backend TTL cache)**  
+**Bypass Edge Cache (Backend TTL Cache)**  
 ```bash
 curl -is -X POST "http://127.0.0.1:8789/translate?cache=no" \
   -H 'Content-Type: application/json' \
   -d '{"text":"Bazar korbo"}' | grep X-Backend-Cache
 ```
 
-**Metrics**
+**Metrics**  
 ```bash
 curl -is https://backend.dhkalign.com/metrics | sed -n '1,8p'
 curl -s  https://backend.dhkalign.com/metrics | egrep 'dhk_db_hit_total|dhk_gpt_fallback_total|dhk_gpt_fail_total' | sort
@@ -138,28 +182,27 @@ curl -s  https://backend.dhkalign.com/metrics | egrep 'dhk_db_hit_total|dhk_gpt_
 
 ## 🔐 Security Posture
 
-- **Edge shield:** all traffic goes through Cloudflare Worker; origin blocked unless header matches `EDGE_SHIELD_TOKEN` (`x-edge-shield` header).  
-- **Pro API:** `/translate/pro` requires `x-api-key` header for authentication.  
-- **Authentication truth table**
-  
+- **Edge Shield:** All traffic routes through the Cloudflare Worker. Origin backend is blocked unless request includes a valid `x-edge-shield` header matching `EDGE_SHIELD_TOKEN`.  
+- **Pro API Authentication:** `/translate/pro` requires an `x-api-key` header for authentication.  
+- **Authentication Truth Table:**
+
   | Surface (client calls)          | `x-edge-shield` | `x-api-key` | `x-admin-key` |
   |---------------------------------|-----------------:|------------:|--------------:|
   | Edge `/translate` (free)        | No               | No          | No            |
   | Edge `/translate/pro`           | No               | **Yes**     | No            |
   | Edge `/admin/keys/*`            | No               | No          | **Yes**       |
-  
-  **Origin is private.** When the Worker calls origin `/translate/pro`, it sends `x-edge-shield: <token>` internally. Clients never send `x-edge-shield`.
 
-- **Rate limiting:**  
-  - **Edge quotas:** daily per‑API‑key quota (KV‑backed, e.g., 1000/day).
-  - **Origin RL:** per‑IP via SlowAPI (60/min) **when enabled** on routes.
-- **CORS:** enforced on all incoming requests.  
-- **Two-layer caching:**  
-  - Edge cache keyed by HTTP method + path + request body.  
-  - Query parameter `?cache=no` bypasses edge cache and hits backend directly, which returns `X-Backend-Cache: HIT|MISS`.  
-- **Audit logs:** append-only HMAC JSONL, no user text stored.  
-- **Stripe webhook:** requires `stripe-signature` header with 5-minute tolerance, only accepts `checkout.session.completed` events, replay attacks prevented via KV replay lock.  
-- **Billing key endpoint:** `/billing/key` returns key once per request, origin allowlisted for security.
+  - The origin backend is private and only accepts requests with the `x-edge-shield` header from the Worker. Clients never send this header directly.  
+- **Rate Limiting:**  
+  - Edge quotas enforce daily per-API-key limits using KV storage (e.g., 1000 requests/day).  
+  - Backend rate limiting (SlowAPI) applies per-IP for certain routes when enabled (e.g., 60 requests/min).  
+- **CORS:** Strictly enforced on all incoming requests.  
+- **Two-Layer Caching:**  
+  - Edge cache keyed by HTTP method, path, and request body.  
+  - Query parameter `?cache=no` bypasses edge cache and hits backend cache directly.  
+- **Audit Logs:** Append-only, HMAC-signed JSONL logs that do not store user text.  
+- **Stripe Webhook:** Requires `stripe-signature` header with 5-minute tolerance; only accepts `checkout.session.completed` events; replay attacks prevented via KV replay lock.  
+- **Billing Key Endpoint:** `/billing/key` returns a key once per request and is origin allowlisted for security.  
 
 ---
 
@@ -171,7 +214,7 @@ See [repo-structure.txt](repo-structure.txt) for a clean tree view.
 
 ## 📚 Documentation
 
-For detailed docs, see the [docs/](docs/) folder:
+For detailed documentation, see the [docs/](docs/) folder:
 
 - [Architecture](docs/ARCHITECTURE.md)  
 - [Security](docs/SECURITY.md)  
@@ -181,31 +224,38 @@ For detailed docs, see the [docs/](docs/) folder:
 - [Contributing](docs/CONTRIBUTING.md)  
 - [Next TODO](docs/NEXT_TODO.md)  
 
-For internal ops and sensitive details, see `private/docs/README_secured_MVP.md` (not part of public GitHub).
+For internal operations and sensitive details, see `private/docs/README_secured_MVP.md` (not part of public GitHub).
 
 ---
 
 ## 🔄 Free vs Pro Split
 
-- **Free tier:** client-side React SPA with safe data, no API key required, limited to free packs.  
-- **Pro tier:** API-key gated endpoints (`/translate/pro`), supports premium packs via `{"pack":"..."}` in request body, usage tracked and rate-limited.
+- **Free Tier:**  
+  - Client-side React SPA with safe data.  
+  - No API key required.  
+  - Limited to free translation packs.  
+- **Pro Tier:**  
+  - API-key gated endpoints (`/translate/pro`).  
+  - Supports premium packs via `{"pack":"..."}` in request body.  
+  - Usage tracked and rate-limited.  
 
 ---
 
 ## 🌐 Environment Variables
 
-- `EDGE_SHIELD_TOKEN` — secret token to authenticate origin requests to backend.  
-- `EDGE_SHIELD_ENFORCE` — enable enforcement of edge shield token.  
+- `EDGE_SHIELD_TOKEN` — Secret token to authenticate origin requests to backend.  
+- `EDGE_SHIELD_ENFORCE` — Enable enforcement of edge shield token.  
 - `BACKEND_CACHE_TTL` — TTL for backend cache in seconds.  
-- `CORS_ORIGINS` — allowed origins for CORS.  
-- Worker secrets managed via Wrangler secrets for production, `infra/edge/.dev.vars` for development.
+- `CORS_ORIGINS` — Allowed origins for CORS.  
+- Worker secrets are managed via Wrangler secrets for production and via `infra/edge/.dev.vars` for development.
 
-### Backend (Fly) Environment Variables
-- `OPENAI_API_KEY` — OpenAI key (sk-…), required only if fallback is enabled
-- `ENABLE_GPT_FALLBACK` — set to `1` to enable GPT fallback on DB miss
-- `GPT_MODEL` — model name (default: `gpt-4o-mini`)
-- `GPT_MAX_TOKENS` — max tokens for fallback responses (default: `128`)
-- `GPT_TIMEOUT_MS` — timeout in milliseconds (default: `2000`)
+### Backend (Fly.io) Environment Variables
+
+- `OPENAI_API_KEY` — OpenAI API key (sk-…), required only if GPT fallback is enabled.  
+- `ENABLE_GPT_FALLBACK` — Set to `1` to enable GPT fallback on DB miss.  
+- `GPT_MODEL` — Model name (default: `gpt-4o-mini`).  
+- `GPT_MAX_TOKENS` — Max tokens for fallback responses (default: `128`).  
+- `GPT_TIMEOUT_MS` — Timeout in milliseconds (default: `2000`).  
 
 ---
 
@@ -224,17 +274,15 @@ For internal ops and sensitive details, see `private/docs/README_secured_MVP.md`
 
 ## 🗂 Production Cutover Checklist
 
-1. Set 
-   
-   `ORIGIN_BASE_URL` in \
-   `infra/edge/wrangler.toml` (both default and `[env.production]`) to https://backend.dhkalign.com.
+1. Set  
+   `ORIGIN_BASE_URL` in `infra/edge/wrangler.toml` (both default and `[env.production]`) to `https://backend.dhkalign.com`.  
 2. Configure Wrangler secrets with production keys (`EDGE_SHIELD_TOKEN`, `ADMIN_KEY`, API keys).  
-3. Set backend secrets on Fly (optional fallback): OPENAI_API_KEY, ENABLE_GPT_FALLBACK, GPT_MODEL, GPT_MAX_TOKENS, GPT_TIMEOUT_MS; then deploy Fly app.
-4. Deploy Worker with `wrangler deploy --env production`.
+3. Set backend secrets on Fly.io (optional fallback): `OPENAI_API_KEY`, `ENABLE_GPT_FALLBACK`, `GPT_MODEL`, `GPT_MAX_TOKENS`, `GPT_TIMEOUT_MS`; then deploy Fly app.  
+4. Deploy Worker with `wrangler deploy --env production`.  
 5. Configure Stripe webhook endpoint and secret in Stripe dashboard.  
 6. Verify admin and API keys work as expected.  
 7. Confirm rate limiting and caching behavior in production.  
-8. Schedule backups and audit log monitoring.
+8. Schedule backups and audit log monitoring.  
 
 ---
 
