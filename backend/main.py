@@ -361,6 +361,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Global exception handler to avoid leaking stack traces to clients
+@app.exception_handler(Exception)
+async def _unhandled(request, exc):
+    logger.exception("unhandled %s %s", request.url.path, type(exc).__name__)
+    return JSONResponse({"ok": False, "error": "internal_error"}, status_code=500)
+
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address, default_limits=["1000/hour"])
 app.state.limiter = limiter
@@ -499,10 +505,9 @@ async def health_check(request: Request):
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         log_health_check("unhealthy", error=str(e))
-        
         return {
             "status": "degraded",
-            "error": str(e),
+            "error": "internal_error",
             "timestamp": datetime.now().isoformat()
         }
 
@@ -548,7 +553,7 @@ async def get_system_stats(request: Request):
         }
     except Exception as e:
         logger.error(f"Stats retrieval failed: {e}")
-        return {"error": str(e)}
+        return {"error": "internal_error"}
 
 @app.get("/logs/analytics")
 @limiter.limit("100/hour")
@@ -589,7 +594,7 @@ async def get_log_analytics(
         
     except Exception as e:
         logger.error(f"Log analytics failed: {e}")
-        return {"error": str(e)}
+        return {"error": "internal_error"}
 
 @app.post("/admin/reload-dataset")
 @log_api_request(logger)
@@ -623,8 +628,8 @@ async def admin_reload_dataset(
         }
         
     except Exception as e:
-        logger.error(f"Admin dataset reload failed: {e}", admin_action="reload_dataset")
-        raise HTTPException(status_code=500, detail=f"Reload failed: {str(e)}")
+        logger.exception("Admin dataset reload failed")
+        raise HTTPException(status_code=500, detail="internal_error")
 
 @app.get("/admin/logs/download/{log_type}")
 @log_api_request(logger)
@@ -670,8 +675,8 @@ async def download_logs(
         }
         
     except Exception as e:
-        logger.error(f"Log download failed: {e}", log_type=log_type)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Log download failed")
+        raise HTTPException(status_code=500, detail="internal_error")
 
 if __name__ == "__main__":
     print("🚀 Starting DHK Align WRAITH Edition with Enhanced Logging...")

@@ -1,7 +1,15 @@
 const BASE = (import.meta.env.VITE_EDGE_BASE || 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev').replace(/\/+$/, '')
 
+let _memKey = ''
 export function getApiKey() {
-  return localStorage.getItem('dhk_api_key') || ''
+  if (_memKey) return _memKey
+  try {
+    _memKey = sessionStorage.getItem('dhk_api_key') || ''
+    if (!_memKey) {
+      _memKey = localStorage.getItem('dhk_api_key') || ''
+    }
+  } catch (_) {}
+  return _memKey
 }
 
 export async function api(path, opts = {}) {
