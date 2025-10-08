@@ -1,4 +1,4 @@
-// src/App.js
+// src/App.jsx
 // Main WRAITH application - clean and focused
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -7,6 +7,22 @@ import { useOffline } from './hooks/useOffline';
 import TranslateInput from './components/TranslateInput';
 import TranslateResult from './components/TranslateResult';
 import { cleanupCache } from './utils/cache';
+
+const EDGE_BASE = (import.meta.env.VITE_EDGE_BASE || 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev').replace(/\/+$/, '');
+const getSessionKey = () => { try { return sessionStorage.getItem('dhk_api_key') || ''; } catch (_) { return ''; } };
+const setSessionKey = (k) => { try { sessionStorage.setItem('dhk_api_key', k); } catch (_) {} };
+
+// Migrate legacy localStorage key → sessionStorage (no at-rest persistence)
+useEffect(() => {
+  try {
+    const s = sessionStorage.getItem('dhk_api_key');
+    const l = localStorage.getItem('dhk_api_key');
+    if (!s && l) {
+      sessionStorage.setItem('dhk_api_key', l);
+      localStorage.removeItem('dhk_api_key');
+    }
+  } catch (_) {}
+}, []);
 
 // Cleanup cache on app start
 cleanupCache();
@@ -18,14 +34,20 @@ export default function App() {
     const sessionId = urlParams.get("session_id");
     const onSuccessPage = window.location.pathname.includes("success") && sessionId;
     if (!onSuccessPage) return;
-    const stored = localStorage.getItem("dhk_api_key");
+    const stored = getSessionKey();
     if (stored) return;
-    fetch(`https://dhkalign-edge-production.tnfy4np8pm.workers.dev/billing/key?session_id=${encodeURIComponent(sessionId)}`)
+    fetch(`${EDGE_BASE}/billing/key?session_id=${encodeURIComponent(sessionId)}`)
       .then(r => r.json())
       .then(j => {
         if (j.ok && j.data && j.data.api_key) {
-          localStorage.setItem("dhk_api_key", j.data.api_key);
+          setSessionKey(j.data.api_key);
           // Optionally show a toast or alert here
+          // remove session_id from URL for privacy
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('session_id');
+            window.history.replaceState({}, document.title, url.toString());
+          } catch (_) {}
         }
       });
   }, []);
