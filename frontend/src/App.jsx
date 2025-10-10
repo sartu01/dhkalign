@@ -9,25 +9,28 @@ import TranslateResult from './components/TranslateResult';
 import { cleanupCache } from './utils/cache';
 
 const EDGE_BASE = (import.meta.env.VITE_EDGE_BASE || 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev').replace(/\/+$/, '');
-const getSessionKey = () => { try { return sessionStorage.getItem('dhk_api_key') || ''; } catch (_) { return ''; } };
-const setSessionKey = (k) => { try { sessionStorage.setItem('dhk_api_key', k); } catch (_) {} };
-
-// Migrate legacy localStorage key → sessionStorage (no at-rest persistence)
-useEffect(() => {
+// Ephemeral, in-memory API key (per-tab). No at-rest storage.
+let __DHK_API_KEY = '';
+const getSessionKey = () => {
   try {
-    const s = sessionStorage.getItem('dhk_api_key');
-    const l = localStorage.getItem('dhk_api_key');
-    if (!s && l) {
-      sessionStorage.setItem('dhk_api_key', l);
-      localStorage.removeItem('dhk_api_key');
-    }
+    return (__DHK_API_KEY || (typeof window !== 'undefined' ? (window.__DHK_API_KEY || '') : '')) || '';
+  } catch (_) { return ''; }
+};
+const setSessionKey = (k) => {
+  try {
+    __DHK_API_KEY = k || '';
+    if (typeof window !== 'undefined') window.__DHK_API_KEY = __DHK_API_KEY;
   } catch (_) {}
-}, []);
+};
 
 // Cleanup cache on app start
 cleanupCache();
 
 export default function App() {
+  // Cleanup any legacy persisted key from localStorage (no at-rest persistence)
+  useEffect(() => {
+    try { localStorage.removeItem('dhk_api_key'); } catch (_) {}
+  }, []);
   // Stripe success page: fetch and store API key
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);

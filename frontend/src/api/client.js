@@ -4,9 +4,9 @@ let _memKey = ''
 export function getApiKey() {
   if (_memKey) return _memKey
   try {
-    _memKey = sessionStorage.getItem('dhk_api_key') || ''
+    _memKey = (typeof window !== 'undefined' && window.__DHK_API_KEY) ? window.__DHK_API_KEY : ''
     if (!_memKey) {
-      _memKey = localStorage.getItem('dhk_api_key') || ''
+      _memKey = (typeof window !== 'undefined' && window.__DHK_API_KEY) ? window.__DHK_API_KEY : ''
     }
   } catch (_) {}
   return _memKey
@@ -43,3 +43,10 @@ export const get  = (p, h={})          => api(p, { method:'GET',  headers:h })
 export const post = (p, body, h={})     => api(p, { method:'POST', body, headers:h })
 
 export const request = api
+export function setApiKey(k) {
+  try {
+    const v = k || '';
+    // in-memory only
+    if (typeof window !== 'undefined') window.__DHK_API_KEY = v;
+  } catch (_) {}
+}
