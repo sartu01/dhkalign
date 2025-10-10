@@ -1,0 +1,26 @@
+name: Smoke
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 * * * *'
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Edge health
+        run: curl -fsS https://dhkalign-edge-production.tnfy4np8pm.workers.dev/edge/health | jq -e '.status=="ok"'
+      - name: Backend health
+        run: curl -fsS https://backend.dhkalign.com/health | jq -e '.ok==true'
+      - name: Free translate twice (expect cache hit second time)
+        run: |
+          curl -fsS 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev/translate?q=Rickshaw%20pabo%20na' | jq -e '.ok==true'
+          curl -fsS 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev/translate?q=Rickshaw%20pabo%20na' | jq -e '.cache_hit==true'
+      - name: Pro miss forces GPT and DB backfill
+        env:
+          PROD_API_KEY: ${{ secrets.PROD_API_KEY }}
+        run: |
+          MISS="gpt_probe_$(date +%s)"
+          curl -fsS -X POST 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev/translate/pro' \
+            -H 'content-type: application/json' -H "x-api-key: $PROD_API_KEY" \
+            -d "{\"text\":\"$MISS\",\"src_lang\":\"bn-rom\",\"tgt_lang\":\"en\"}" | jq -e '.ok==true'
