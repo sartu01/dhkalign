@@ -118,7 +118,8 @@ export default {
         origin.status ||= r.ok ? 'ok' : 'error';
         origin.code = r.status;
       } catch (e) {
-        origin = { status: 'down', error: String(e) };
+        console.error('[edge] admin/health origin check failed:', (e && e.message) ? e.message : e);
+        origin = { status: 'down', error: 'internal_error' };
       }
       return json({ status: 'ok', source: 'edge', origin, time: new Date().toISOString() });
     }
@@ -218,6 +219,10 @@ export default {
       return j(false, null, 'internal_error', 502);
     }
     const status = originResp.status;
+    // Sanitize upstream server errors to avoid leaking stack traces or exception text
+    if (status >= 500) {
+      return j(false, null, 'internal_error', status);
+    }
     const respHeaders = new Headers(originResp.headers);
     addCors(respHeaders);
     const bodyArr = await originResp.arrayBuffer();
