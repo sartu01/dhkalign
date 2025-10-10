@@ -169,10 +169,10 @@ class DatabaseManager:
                 
                 return None
                 
-        except Exception as e:
+        except Exception:
             duration_ms = (time.time() - start_time) * 1000
             logger.database_operation("translation_lookup", False, duration_ms, 
-                                    direction=direction, error=str(e))
+                                    direction=direction, error="internal_error")
             return None
     
     @log_execution_time(logger, "csv_data_load")
@@ -226,10 +226,10 @@ class DatabaseManager:
                 log_startup(f"Dataset loaded successfully: {actual_count} translation pairs")
                 return actual_count
                 
-        except Exception as e:
+        except Exception:
             duration_ms = (time.time() - start_time) * 1000
-            logger.database_operation("csv_load", False, duration_ms, error=str(e))
-            logger.error(f"Failed to load CSV data: {e}")
+            logger.database_operation("csv_load", False, duration_ms, error="internal_error")
+            logger.exception("Failed to load CSV data")
             return 0
     
     def log_missed_query(self, query: str, direction: str, session_hash: str = None):
@@ -245,8 +245,8 @@ class DatabaseManager:
                 # Also log to structured logger
                 logger.translation_miss(query, direction, session_hash)
                 
-        except Exception as e:
-            logger.error(f"Failed to log missed query: {e}")
+        except Exception:
+            logger.exception("Failed to log missed query")
     
     def get_stats(self) -> Dict[str, Any]:
         """Get comprehensive database statistics"""
@@ -272,9 +272,9 @@ class DatabaseManager:
                 
                 return stats
                 
-        except Exception as e:
-            logger.error(f"Failed to get database stats: {e}")
-            return {"error": str(e)}
+        except Exception:
+            logger.exception("Failed to get database stats")
+            return {"error": "internal_error"}
 
 # Global database manager
 db_manager = None
@@ -340,9 +340,9 @@ async def lifespan(app: FastAPI):
         log_startup(f"DHK Align WRAITH ready! ({record_count} translations loaded)")
         log_startup("7-step enhanced translation chain active")
         
-    except Exception as e:
+    except Exception:
         startup_duration = (time.time() - startup_start) * 1000
-        logger.error(f"Startup failed: {e}", startup_duration=startup_duration)
+        logger.exception("Startup failed", startup_duration=startup_duration)
         
         # Create minimal fallback
         db_manager = DatabaseManager(DB_PATH)
@@ -435,8 +435,8 @@ async def api_translate(
     except HTTPException:
         # Re-raise typed errors
         raise
-    except Exception as e:
-        logger.error(f"/api/translate failed: {e}")
+    except Exception:
+        logger.exception("/api/translate failed")
         # Return a graceful fallback rather than 5xx to avoid noisy UI errors
         return {
             "translation": q,
@@ -502,9 +502,9 @@ async def health_check(request: Request):
             },
             "timestamp": datetime.now().isoformat()
         }
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        log_health_check("unhealthy", error=str(e))
+    except Exception:
+        logger.exception("Health check failed")
+        log_health_check("unhealthy", error="internal_error")
         return {
             "status": "degraded",
             "error": "internal_error",
@@ -551,8 +551,8 @@ async def get_system_stats(request: Request):
                 "logs": "/logs/analytics"
             }
         }
-    except Exception as e:
-        logger.error(f"Stats retrieval failed: {e}")
+    except Exception:
+        logger.exception("Stats retrieval failed")
         return {"error": "internal_error"}
 
 @app.get("/logs/analytics")
@@ -592,8 +592,8 @@ async def get_log_analytics(
         
         return analytics
         
-    except Exception as e:
-        logger.error(f"Log analytics failed: {e}")
+    except Exception:
+        logger.exception("Log analytics failed")
         return {"error": "internal_error"}
 
 @app.post("/admin/reload-dataset")
