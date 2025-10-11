@@ -23,6 +23,7 @@ jobs:
           curl -fsS 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev/translate?q=Rickshaw%20pabo%20na' | jq -e '.ok==true'
           curl -fsS 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev/translate?q=Rickshaw%20pabo%20na' | jq -e '.cache_hit==true'
       - name: Pro miss forces GPT and DB backfill
+        if: ${{ github.event_name != 'pull_request' }}
         env:
           PROD_API_KEY: ${{ secrets.PROD_API_KEY }}
         run: |
