@@ -1,4 +1,6 @@
 name: Smoke
+permissions:
+  contents: read
 on:
   push:
     branches: [main]
@@ -6,6 +8,8 @@ on:
     - cron: '17 * * * *'
 jobs:
   smoke:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Edge health
