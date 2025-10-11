@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Edge health
-        run: curl -fsS https://dhkalign-edge-production.tnfy4np8pm.workers.dev/edge/health | jq -e '.ok==true or .ok==true or .status=="ok"'
+        run: curl -fsS https://dhkalign-edge-production.tnfy4np8pm.workers.dev/edge/health | jq -e '.ok==true or .status=="ok"'
       - name: Backend health
         run: curl -fsS https://backend.dhkalign.com/health | jq -e '.ok==true'
       - name: Free translate twice (expect cache hit second time)
