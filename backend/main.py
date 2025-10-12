@@ -5,7 +5,10 @@ WRAITH Edition with structured logging, performance monitoring, and security fea
 """
 
 import sqlite3
-import pandas as pd
+try:
+    import pandas as pd  # optional; not required for API runtime
+except Exception:
+    pd = None
 import uvicorn
 import os
 import time
@@ -180,6 +183,9 @@ class DatabaseManager:
         """Load CSV data with detailed logging"""
         if not Path(csv_path).exists():
             logger.warning(f"CSV file not found: {csv_path}")
+            return 0
+        if pd is None:
+            logger.warning(f"pandas not installed; skipping CSV load for {csv_path}")
             return 0
         
         start_time = time.time()
@@ -709,7 +715,7 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=int(os.getenv("PORT", "8090")),
+        port=int(os.getenv("PORT", "8080")),
         reload=False,
         log_level="info",
         access_log=True
