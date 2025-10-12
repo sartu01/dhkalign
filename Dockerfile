@@ -19,4 +19,4 @@ COPY backend/ /app/backend/
 RUN mkdir -p /app/backend/data
 
 EXPOSE 8090
-CMD ["python", "-m", "uvicorn", "backend.app_sqlite:app", "--host", "0.0.0.0", "--port", "8090"]
+CMD ["sh","-c","python -m backend.main || uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8090}"]
