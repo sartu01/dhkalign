@@ -361,6 +361,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# /version endpoint for version and commit sha reporting
+@app.get("/version")
+def version():
+    return {"ok": True, "sha": os.getenv("COMMIT_SHA", "dev")}
+
 # Global exception handler to avoid leaking stack traces to clients
 @app.exception_handler(Exception)
 async def _unhandled(request, exc):
@@ -375,10 +380,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Restrict in production
+    allow_origins=["https://dhkalign.com", "https://www.dhkalign.com"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["content-type", "x-api-key", "x-admin-key", "stripe-signature"],
 )
 
 # Include the enhanced translator router
@@ -700,12 +705,12 @@ if __name__ == "__main__":
     print("   • translations.jsonl - Translation operations") 
     print("   • performance.jsonl - Performance metrics")
     print("   • errors.log - Error tracking")
-    
+
     uvicorn.run(
-        "main:app",
+        app,
         host="0.0.0.0",
-        port=8000,
-        reload=True,
+        port=int(os.getenv("PORT", "8090")),
+        reload=False,
         log_level="info",
         access_log=True
     )

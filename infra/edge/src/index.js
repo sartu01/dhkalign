@@ -1,10 +1,38 @@
+
 import { handleStripeWebhook } from './stripe.js';
 
+// Allowed CORS origins (prod + local dev)
+const ALLOWED_ORIGINS = new Set([
+  'https://dhkalign.com',
+  'https://www.dhkalign.com',
+  'http://127.0.0.1:5173',
+  'http://localhost:5173'
+]);
+
+// Security headers helper
+function addSecurityHeaders(h) {
+  h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  h.set('Referrer-Policy', 'no-referrer');
+  h.set('X-Content-Type-Options', 'nosniff');
+  h.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  h.set('Content-Security-Policy', [
+    "default-src 'self'",
+    "connect-src 'self' https://backend.dhkalign.com https://edge.dhkalign.com https://api.stripe.com",
+    "img-src 'self' https: data:",
+    "script-src 'self' https://js.stripe.com",
+    "style-src 'self' 'unsafe-inline'",
+    "frame-src https://js.stripe.com https://hooks.stripe.com",
+    "base-uri 'none'",
+    "form-action 'self' https://checkout.stripe.com"
+  ].join('; '));
+}
+
 // --- WRAITH JSON + quota helpers ---
-function j(ok, data = null, error = null, status = 200, extraHeaders = {}) {
+function j(ok, data = null, error = null, status = 200, extraHeaders = {}, origin = '') {
   const body = ok ? { ok: true, data } : { ok: false, error };
   const h = new Headers({ "content-type": "application/json", ...extraHeaders });
-  addCors(h);
+  addCors(h, origin);
+  addSecurityHeaders(h);
   return new Response(JSON.stringify(body), { status, headers: h });
 }
 
@@ -24,7 +52,8 @@ async function enforceQuota(request, env) {
 function requireAdmin(request, env) {
   const got = request.headers.get('x-admin-key') || '';
   if (!env.ADMIN_KEY || got !== env.ADMIN_KEY) {
-    return json({ error: 'unauthorized' }, 401);
+    const origin = (typeof request !== 'undefined' && request.headers) ? (request.headers.get('origin') || '') : '';
+    return json({ error: 'unauthorized' }, 401, origin);
   }
   return null;
 }
@@ -32,18 +61,23 @@ function requireAdmin(request, env) {
 export default {
   async fetch(request, env, ctx) {
     // CORS preflight
-    if (request.method === 'OPTIONS') return cors();
+    if (request.method === 'OPTIONS') return cors(request.headers.get('origin') || '');
 
     const url = new URL(request.url);
+    const reqOrigin = request.headers.get('origin') || '';
 
     // Simple root index and favicon to avoid noisy 403s
     if (url.pathname === '/' && request.method === 'GET') {
-      return j(true, { service: 'dhkalign-edge', time: new Date().toISOString() });
+      return j(true, { service: 'dhkalign-edge', time: new Date().toISOString() }, null, 200, {}, reqOrigin);
     }
     if (url.pathname === '/favicon.ico') {
       const h = new Headers();
-      addCors(h);
+      addCors(h, reqOrigin);
+      addSecurityHeaders(h);
       return new Response(null, { status: 204, headers: h });
+    }
+    if (url.pathname === '/version' && request.method === 'GET') {
+      return j(true, { service: 'dhkalign-edge', sha: env.COMMIT_SHA || 'dev', time: new Date().toISOString() }, null, 200, {}, reqOrigin);
     }
 
     // Global admin guard: lock all /admin/* endpoints behind x-admin-key
@@ -194,7 +228,8 @@ export default {
         const bytes = Uint8Array.from(atob(obj.body_b64), c => c.charCodeAt(0));
         const res = new Response(bytes, { status: obj.status, headers: obj.headers });
         res.headers.set('CF-Cache-Edge', 'HIT');
-        addCors(res.headers);
+        addCors(res.headers, reqOrigin);
+        addSecurityHeaders(res.headers);
         return res;
       }
     }
@@ -224,7 +259,8 @@ export default {
       return j(false, null, 'internal_error', status);
     }
     const respHeaders = new Headers(originResp.headers);
-    addCors(respHeaders);
+    addCors(respHeaders, reqOrigin);
+    addSecurityHeaders(respHeaders);
     const bodyArr = await originResp.arrayBuffer();
     const resp = new Response(bodyArr, { status, headers: respHeaders });
 
@@ -250,13 +286,19 @@ export default {
 };
 
 // ---------- helpers ----------
-function cors() { const h = new Headers(); addCors(h); return new Response(null, { headers: h }); }
-function addCors(h) {
-  h.set('Access-Control-Allow-Origin', '*');
+function cors(origin = '') { const h = new Headers(); addCors(h, origin); addSecurityHeaders(h); return new Response(null, { headers: h }); }
+function addCors(h, origin = '') {
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    h.set('Access-Control-Allow-Origin', origin);
+  } else {
+    // default to apex in absence of a known/allowed origin
+    h.set('Access-Control-Allow-Origin', 'https://dhkalign.com');
+  }
+  h.set('Vary', 'Origin');
   h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   h.set('Access-Control-Allow-Headers', 'Content-Type, x-api-key, x-admin-key, stripe-signature');
 }
-function json(obj, status = 200) { const h = new Headers({ 'content-type': 'application/json' }); addCors(h); return new Response(JSON.stringify(obj), { status, headers: h }); }
+function json(obj, status = 200, origin = '') { const h = new Headers({ 'content-type': 'application/json' }); addCors(h, origin); addSecurityHeaders(h); return new Response(JSON.stringify(obj), { status, headers: h }); }
 async function safeJson(r) { try { return await r.json(); } catch { return { raw: await r.text() }; } }
 async function cacheKeyFrom(request) {
   const url = new URL(request.url);
