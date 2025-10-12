@@ -17,5 +17,5 @@ RUN python -m pip install --upgrade pip wheel && \
 COPY backend/ /app/backend/
 RUN mkdir -p /app/backend/data
 
-EXPOSE 8090
-CMD ["sh","-c","python -m backend.main || uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8090}"]
+EXPOSE 8080
+CMD ["sh","-c","python -m backend.main || uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
