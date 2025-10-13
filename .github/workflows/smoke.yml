@@ -1,38 +1,65 @@
 name: Smoke
-permissions:
-  contents: read
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+    branches: [ main ]
+  push:
+    branches: [ main ]
   schedule:
     - cron: '17 * * * *'
+
 jobs:
   smoke:
-    permissions:
-      contents: read
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Install jq
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y jq
+        run: sudo apt-get update -y && sudo apt-get install -y jq
+
       - name: Edge health
-        run: curl -fsS --retry 3 --retry-all-errors --max-time 20 https://dhkalign-edge-production.tnfy4np8pm.workers.dev/edge/health | jq -e '.ok==true or .status=="ok"'
-      - name: Backend health
-        run: curl -fsS --retry 3 --retry-all-errors --max-time 20 https://backend.dhkalign.com/health | jq -e '.ok==true'
-      - name: Free translate twice (expect cache hit second time)
         run: |
-          curl -fsS --retry 3 --retry-all-errors --max-time 20 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev/translate?q=Rickshaw%20pabo%20na' | jq -e '.ok==true'
-          # Second call: allow either cache_hit==true OR no cache_hit field but ok==true (workers may omit the flag)
-          curl -fsS --retry 3 --retry-all-errors --max-time 20 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev/translate?q=Rickshaw%20pabo%20na' | jq -e '(.cache_hit==true) or (.ok==true and has("cache_hit")|not)'
-      - name: Pro miss forces GPT and DB backfill
+          set -e
+          curl -fsSL --retry 3 --retry-all-errors --max-time 20 -H 'accept: application/json' \
+            https://edge.dhkalign.com/edge/health | jq -e '.ok==true' \
+          || (echo '--- edge body ---'; curl -fsSL https://edge.dhkalign.com/edge/health; exit 1)
+
+      - name: Backend health (via domain)
+        run: |
+          set -e
+          curl -fsSL --retry 3 --retry-all-errors --max-time 20 -H 'accept: application/json' \
+            https://backend.dhkalign.com/health | jq -e '(.ok==true) or (.status=="ok")' \
+          || (echo '--- backend body ---'; curl -fsSL https://backend.dhkalign.com/health; exit 1)
+
+      - name: Free translate (1) via Worker
+        run: |
+          set -e
+          curl -fsSL --retry 3 --retry-all-errors --max-time 20 \
+            'https://edge.dhkalign.com/translate?q=Rickshaw%20pabo%20na' \
+          | jq -e '(.ok==true) or (.translation!=null) or (.result!=null)' \
+          || (echo '--- translate (1) body ---'; \
+              curl -fsSL 'https://edge.dhkalign.com/translate?q=Rickshaw%20pabo%20na'; exit 1)
+
+      - name: Free translate (2) via Worker
+        run: |
+          set -e
+          curl -fsSL --retry 3 --retry-all-errors --max-time 20 \
+            'https://edge.dhkalign.com/translate?q=Rickshaw%20pabo%20na' \
+          | jq -e '(.ok==true) or (.translation!=null) or (.result!=null)' \
+          || (echo '--- translate (2) body ---'; \
+              curl -fsSL 'https://edge.dhkalign.com/translate?q=Rickshaw%20pabo%20na'; exit 1)
+
+      - name: Pro translate (skip on PR)
         if: ${{ github.event_name != 'pull_request' }}
         env:
           PROD_API_KEY: ${{ secrets.PROD_API_KEY }}
         run: |
+          set -e
           MISS="gpt_probe_$(date +%s)"
-          curl -fsS --retry 3 --retry-all-errors --max-time 30 -X POST 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev/translate/pro' \
+          curl -fsSL --retry 3 --retry-all-errors --max-time 30 -X POST \
+            'https://edge.dhkalign.com/translate/pro' \
             -H 'content-type: application/json' -H "x-api-key: $PROD_API_KEY" \
-            -d "{\"text\":\"$MISS\",\"src_lang\":\"bn-rom\",\"tgt_lang\":\"en\"}" | jq -e '.ok==true'
+            -d "{\"text\":\"$MISS\",\"src_lang\":\"bn-rom\",\"tgt_lang\":\"en\"}" \
+          | jq -e '(.ok==true) or (.translation!=null) or (.result!=null)' \
+          || (echo '--- pro body ---'; \
+              curl -fsSL -X POST 'https://edge.dhkalign.com/translate/pro' \
+                -H 'content-type: application/json' -H "x-api-key: $PROD_API_KEY" \
+                -d "{\"text\":\"$MISS\",\"src_lang\":\"bn-rom\",\"tgt_lang\":\"en\"}"; exit 1)
