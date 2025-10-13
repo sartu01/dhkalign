@@ -1,452 +1,60 @@
-// src/App.jsx
-// Main WRAITH application - clean and focused
+import { useEffect, useRef, useState } from "react";
+const DEV_KEY = import.meta.env.VITE_DEV_PRO_KEY;
+const IS_LOCAL = (typeof window !== "undefined") && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(window.location.host);
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { useTranslator } from './hooks/useTranslator';
-import { useOffline } from './hooks/useOffline';
-import TranslateInput from './components/TranslateInput';
-import TranslateResult from './components/TranslateResult';
-import { cleanupCache } from './utils/cache';
+// Rolls‑Royce key modal — in‑memory only, CSP‑safe, accessible.
+// Props: open:boolean, onClose:() => void, onSet:(key:string)=>void
+export default function KeyModal({ open = false, onClose = () => {}, onSet = () => {} }) {
+  const [k, setK] = useState(""); const inputRef = useRef(null);
 
-const EDGE_BASE = (import.meta.env.VITE_EDGE_BASE || 'https://dhkalign-edge-production.tnfy4np8pm.workers.dev').replace(/\/+$/, '');
-// Ephemeral, in-memory API key (per-tab). No at-rest storage.
-let __DHK_API_KEY = '';
-const getSessionKey = () => {
-  try {
-    return (__DHK_API_KEY || (typeof window !== 'undefined' ? (window.__DHK_API_KEY || '') : '')) || '';
-  } catch (_) { return ''; }
-};
-const setSessionKey = (k) => {
-  try {
-    __DHK_API_KEY = k || '';
-    if (typeof window !== 'undefined') window.__DHK_API_KEY = __DHK_API_KEY;
-  } catch (_) {}
-};
-
-// Cleanup cache on app start
-cleanupCache();
-
-export default function App() {
-  // Cleanup any legacy persisted key from localStorage (no at-rest persistence)
   useEffect(() => {
-    try { localStorage.removeItem('dhk_api_key'); } catch (_) {}
-  }, []);
-  // Stripe success page: fetch and store API key
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionId = urlParams.get("session_id");
-    const onSuccessPage = window.location.pathname.includes("success") && sessionId;
-    if (!onSuccessPage) return;
-    const stored = getSessionKey();
-    if (stored) return;
-    fetch(`${EDGE_BASE}/billing/key?session_id=${encodeURIComponent(sessionId)}`)
-      .then(r => r.json())
-      .then(j => {
-        if (j.ok && j.data && j.data.api_key) {
-          setSessionKey(j.data.api_key);
-          // Optionally show a toast or alert here
-          // remove session_id from URL for privacy
-          try {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('session_id');
-            window.history.replaceState({}, document.title, url.toString());
-          } catch (_) {}
-        }
-      });
-  }, []);
-  const { 
-    translate, 
-    provideFeedback, 
-    loading, 
-    error, 
-    result, 
-    clearError,
-    clearCache,
-    getStats
-  } = useTranslator();
-  
-  const { isOnline, connectionType } = useOffline();
-  const [showStats, setShowStats] = useState(false);
-  const [currentStats, setCurrentStats] = useState(null);
-
-  // Handle translation with direction support
-  const handleTranslate = useCallback(async (input, direction) => {
-    await translate(input, direction);
-  }, [translate]);
-
-  // Handle user feedback
-  const handleFeedback = useCallback(async (query, direction, translation, isCorrect) => {
-    return await provideFeedback(query, direction, translation, isCorrect);
-  }, [provideFeedback]);
-
-  // Show stats modal
-  const handleShowStats = useCallback(() => {
-    const stats = getStats();
-    setCurrentStats(stats);
-    setShowStats(true);
-  }, [getStats]);
-
-  // Clear all cache
-  const handleClearCache = useCallback(() => {
-    clearCache();
-    // Update stats if showing
-    if (showStats) {
-      setCurrentStats(getStats());
+    if (open) {
+      setK("");
+      const t = setTimeout(() => { inputRef.current?.focus(); }, 0);
+      return () => clearTimeout(t);
     }
-  }, [clearCache, getStats, showStats]);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow; document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [open, onClose]);
+
+  if (!open) return null;
+  const save = () => { const val = (k || "").trim(); if (typeof window !== "undefined") window.__DHK_API_KEY = val; try { onSet(val); } catch(_) {} onClose(); };
 
   return (
-    <div style={styles.app}>
-      {/* Header */}
-      <header style={styles.header}>
-        <h1 style={styles.title}>DHK Align – WRAITH Translator</h1>
-        <p style={styles.subtitle}>
-          Advanced Banglish ↔ English Translation with AI Enhancement
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
+      <div role="dialog" aria-modal="true" aria-labelledby="dhk-key-title"
+           className="relative z-10 w-[90%] max-w-md rounded-lg border border-white/10 bg-black/85 p-5 shadow-2xl backdrop-blur">
+        <h2 id="dhk-key-title" className="text-lg font-semibold tracking-tight">Enter Pro API Key</h2>
+        <p className="mt-1 text-sm opacity-70">
+          Stored in memory only for this tab. Refresh clears it. {IS_LOCAL && DEV_KEY ? "Dev key detected." : ""}
         </p>
-        
-        {/* Status Indicators */}
-        <div style={styles.statusBar}>
-          <div style={{
-            ...styles.statusItem,
-            ...(isOnline ? styles.statusOnline : styles.statusOffline)
-          }}>
-            {isOnline ? '🟢' : '🔴'} {isOnline ? 'Online' : 'Offline'}
-            {connectionType !== 'unknown' && isOnline && (
-              <span style={styles.connectionType}>({connectionType})</span>
-            )}
-          </div>
-          
-          <button 
-            onClick={handleShowStats}
-            style={styles.statsButton}
-            title="View statistics"
-          >
-            📊 Stats
+        <div className="mt-4">
+          <input ref={inputRef} type="password" inputMode="text" autoComplete="off" spellCheck="false"
+                 className="w-full px-3 py-2 rounded bg-white/5 border border-white/10 focus:outline-none"
+                 placeholder={IS_LOCAL && DEV_KEY ? `Dev key: ${DEV_KEY}` : "Enter your Pro API key"}
+                 value={k}
+                 onChange={(e) => setK(e.target.value)}
+                 aria-label="Pro API key input"
+          />
+        </div>
+        <div className="mt-5 flex justify-end gap-3">
+          <button type="button" onClick={onClose}
+                  className="px-4 py-2 rounded border border-white/20 hover:border-white/40 focus:outline-none">
+            Cancel
+          </button>
+          <button type="button" onClick={save} disabled={!k.trim()}
+                  className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 focus:outline-none">
+            Save
           </button>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main style={styles.main}>
-        {/* Error Display */}
-        {error && (
-          <div style={styles.errorBanner}>
-            <span style={styles.errorText}>{error}</span>
-            <button 
-              onClick={clearError}
-              style={styles.errorClose}
-              title="Dismiss error"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* Offline Warning */}
-        {!isOnline && (
-          <div style={styles.offlineWarning}>
-            ⚠️ You're offline. Translation may not work until connection is restored.
-          </div>
-        )}
-
-        {/* Translation Interface */}
-        <div style={styles.translationContainer}>
-          <TranslateInput
-            onTranslate={handleTranslate}
-            loading={loading}
-            disabled={!isOnline}
-          />
-
-          <TranslateResult
-            result={result}
-            onFeedback={handleFeedback}
-            loading={loading}
-          />
-        </div>
-      </main>
-
-      {/* Stats Modal */}
-      {showStats && currentStats && (
-        <div style={styles.modalOverlay} onClick={() => setShowStats(false)}>
-          <div style={styles.statsModal} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.statsHeader}>
-              <h3 style={styles.statsTitle}>Translation Statistics</h3>
-              <button 
-                onClick={() => setShowStats(false)}
-                style={styles.modalClose}
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div style={styles.statsContent}>
-              {/* Request Stats */}
-              <div style={styles.statSection}>
-                <h4 style={styles.statSectionTitle}>Requests</h4>
-                <div style={styles.statGrid}>
-                  <div style={styles.statItem}>
-                    <span style={styles.statLabel}>Total Requests:</span>
-                    <span style={styles.statValue}>{currentStats.requests.totalRequests}</span>
-                  </div>
-                  <div style={styles.statItem}>
-                    <span style={styles.statLabel}>Cache Hits:</span>
-                    <span style={styles.statValue}>{currentStats.requests.cacheHits}</span>
-                  </div>
-                  <div style={styles.statItem}>
-                    <span style={styles.statLabel}>Errors:</span>
-                    <span style={styles.statValue}>{currentStats.requests.errors}</span>
-                  </div>
-                  <div style={styles.statItem}>
-                    <span style={styles.statLabel}>Success Rate:</span>
-                    <span style={styles.statValue}>{currentStats.successRate}%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Cache Stats */}
-              <div style={styles.statSection}>
-                <h4 style={styles.statSectionTitle}>Cache</h4>
-                <div style={styles.statGrid}>
-                  <div style={styles.statItem}>
-                    <span style={styles.statLabel}>Total Entries:</span>
-                    <span style={styles.statValue}>{currentStats.cache.totalEntries}</span>
-                  </div>
-                  <div style={styles.statItem}>
-                    <span style={styles.statLabel}>Valid Entries:</span>
-                    <span style={styles.statValue}>{currentStats.cache.validEntries}</span>
-                  </div>
-                  <div style={styles.statItem}>
-                    <span style={styles.statLabel}>Expired Entries:</span>
-                    <span style={styles.statValue}>{currentStats.cache.expiredEntries}</span>
-                  </div>
-                </div>
-                
-                <button
-                  onClick={handleClearCache}
-                  style={styles.clearCacheButton}
-                >
-                  🗑️ Clear Cache
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Footer */}
-      <footer style={styles.footer}>
-        <p style={styles.footerText}>
-          Powered by WRAITH Translation Engine v2.0
-        </p>
-      </footer>
+      </div>
     </div>
   );
 }
-
-// Styles
-const styles = {
-  app: {
-    minHeight: '100vh',
-    backgroundColor: '#f9fafb',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  header: {
-    backgroundColor: 'white',
-    padding: '24px 20px',
-    borderBottom: '1px solid #e5e7eb',
-    textAlign: 'center'
-  },
-  title: {
-    margin: '0 0 8px 0',
-    fontSize: '28px',
-    fontWeight: '700',
-    color: '#111827'
-  },
-  subtitle: {
-    margin: '0 0 16px 0',
-    fontSize: '16px',
-    color: '#6b7280'
-  },
-  statusBar: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: '16px',
-    flexWrap: 'wrap'
-  },
-  statusItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    fontSize: '14px',
-    fontWeight: '500'
-  },
-  statusOnline: {
-    color: '#059669'
-  },
-  statusOffline: {
-    color: '#dc2626'
-  },
-  connectionType: {
-    fontSize: '12px',
-    color: '#6b7280',
-    fontWeight: '400'
-  },
-  statsButton: {
-    padding: '6px 12px',
-    backgroundColor: '#f3f4f6',
-    border: '1px solid #d1d5db',
-    borderRadius: '6px',
-    fontSize: '14px',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s'
-  },
-  main: {
-    flex: 1,
-    padding: '32px 20px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '24px'
-  },
-  errorBanner: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: '600px',
-    padding: '12px 16px',
-    backgroundColor: '#fef2f2',
-    border: '1px solid #fecaca',
-    borderRadius: '8px',
-    color: '#dc2626'
-  },
-  errorText: {
-    fontSize: '14px'
-  },
-  errorClose: {
-    background: 'none',
-    border: 'none',
-    color: '#dc2626',
-    cursor: 'pointer',
-    fontSize: '16px',
-    padding: '0 4px'
-  },
-  offlineWarning: {
-    width: '100%',
-    maxWidth: '600px',
-    padding: '12px 16px',
-    backgroundColor: '#fffbeb',
-    border: '1px solid #fed7aa',
-    borderRadius: '8px',
-    color: '#92400e',
-    fontSize: '14px',
-    textAlign: 'center'
-  },
-  translationContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
-    width: '100%',
-    maxWidth: '600px'
-  },
-  modalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: '20px'
-  },
-  statsModal: {
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-    maxWidth: '500px',
-    width: '100%',
-    maxHeight: '80vh',
-    overflow: 'auto'
-  },
-  statsHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '20px 24px 0 24px',
-    borderBottom: '1px solid #e5e7eb'
-  },
-  statsTitle: {
-    margin: 0,
-    fontSize: '20px',
-    fontWeight: '600',
-    color: '#111827'
-  },
-  modalClose: {
-    background: 'none',
-    border: 'none',
-    fontSize: '20px',
-    color: '#6b7280',
-    cursor: 'pointer',
-    padding: '4px'
-  },
-  statsContent: {
-    padding: '24px'
-  },
-  statSection: {
-    marginBottom: '24px'
-  },
-  statSectionTitle: {
-    margin: '0 0 12px 0',
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#374151'
-  },
-  statGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '8px'
-  },
-  statItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '8px 0'
-  },
-  statLabel: {
-    fontSize: '14px',
-    color: '#6b7280'
-  },
-  statValue: {
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#111827'
-  },
-  clearCacheButton: {
-    marginTop: '12px',
-    padding: '8px 16px',
-    backgroundColor: '#dc2626',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    fontSize: '14px',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s'
-  },
-  footer: {
-    backgroundColor: 'white',
-    borderTop: '1px solid #e5e7eb',
-    padding: '16px',
-    textAlign: 'center'
-  },
-  footerText: {
-    margin: 0,
-    fontSize: '14px',
-    color: '#6b7280'
-  }
-};
