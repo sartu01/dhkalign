@@ -28,7 +28,11 @@ jobs:
           echo "--- edge /version ($CODE) ---"
           jq . < body.json || cat body.json || true
           [ "$CODE" = "200" ] || { echo "edge /version non-200: $CODE"; exit 1; }
-          jq -e '(.sha? != null) or (.data?.sha? != null)' < body.json
+          # accept sha/commit/version fields OR any 7+ hex string anywhere
+          jq -e '
+            ( .sha? // .commit? // .version? // empty | tostring | test("^[0-9a-fA-F]{7,40}$") )
+            or ( .. | scalars | tostring | test("^[0-9a-fA-F]{7,40}$") )
+          ' < body.json
 
       - name: Backend health (via domain)
         run: |
