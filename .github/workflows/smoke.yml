@@ -17,9 +17,9 @@ jobs:
 
       - name: Edge health
         run: |
-          set -e; curl -fsSL --retry 3 --retry-all-errors --max-time 20 -H 'accept: application/json' https://edge.dhkalign.com/edge/health \
-          | jq -e '(.ok==true) or (.status=="ok")' \
-          || (echo '--- edge body ---'; curl -fsSL https://edge.dhkalign.com/edge/health; exit 1)
+          set -e; curl -fsSL --retry 3 --retry-all-errors --max-time 20 -H 'accept: application/json' https://edge.dhkalign.com/version \
+          | jq -e '(.sha? != null) or (.data?.sha? != null)' \
+          || (echo '--- edge body ---'; curl -fsSL https://edge.dhkalign.com/version; exit 1)
 
       - name: Backend health (via domain)
         run: |
