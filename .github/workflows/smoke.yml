@@ -20,16 +20,13 @@ jobs:
           code=$(curl -s -o /dev/null -w '%{http_code}' "https://www.dhkalign.com/test?q=1")
           [ "$code" = "301" ] || { echo "Expected 301, got $code"; exit 1; }
 
-      - name: Edge health (CI-safe)
-        run: |
-          set -euo pipefail
-          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-          code=$(curl -sS -A "$UA" -H 'accept: application/json' -o body.json -w '%{http_code}' \
-                 https://edge.dhkalign.com/edge/health || true)
-          echo "--- edge body ($code) ---"
-          jq . < body.json || cat body.json || true
-          [ "$code" = "200" ] || { echo "Edge health non-200: $code"; exit 1; }
-
+- name: Edge version (CI-safe)
+  run: |
+    set -euo pipefail
+    OUT=$(curl -fsS https://edge.dhkalign.com/version || true)
+    echo "--- edge /version ---"
+    echo "$OUT" | jq . || echo "$OUT"
+    echo "$OUT" | jq -e '(.sha? != null) or (.data?.sha? != null)'
       - name: Backend health (via domain)
         run: |
           set -euo pipefail
