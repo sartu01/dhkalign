@@ -24,30 +24,28 @@ jobs:
   run: |
     set -euo pipefail
     UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-    curl_edge() {
-      curl -sS --retry 2 --retry-all-errors -A "$UA" -H 'accept: application/json' -o edge.json -w '%{http_code}' https://edge.dhkalign.com/version || true
+    has_sha_file() {
+      F="$1"
+      if jq -e . >/dev/null 2>&1 <"$F"; then
+        jq -e '( .sha? // .commit? // .version? // empty | tostring | test("^[0-9a-fA-F]{7,40}$") ) or ( .. | scalars | tostring | test("^[0-9a-fA-F]{7,40}$") )' <"$F"
+      else
+        grep -Eq '[0-9a-fA-F]{7,40}' "$F" || { echo "No SHA-like string in $F"; exit 1; }
+      fi
     }
-    curl_backend() {
-      curl -sS --retry 2 --retry-all-errors -H 'accept: application/json' -o backend.json -w '%{http_code}' https://backend.dhkalign.com/version || true
-    }
+    curl_edge() { curl -sS --retry 2 --retry-all-errors -A "$UA" -H 'accept: application/json' -o edge.json -w '%{http_code}' https://edge.dhkalign.com/version || true; }
+    curl_backend() { curl -sS --retry 2 --retry-all-errors -H 'accept: application/json' -o backend.json -w '%{http_code}' https://backend.dhkalign.com/version || true; }
     CODE=$(curl_edge)
     echo "--- edge /version ($CODE) ---"
     jq . < edge.json || cat edge.json || true
     if [ "$CODE" = "200" ]; then
-      jq -e '
-        ( .sha? // .commit? // .version? // empty | tostring | test("^[0-9a-fA-F]{7,40}$") )
-        or ( .. | scalars | tostring | test("^[0-9a-fA-F]{7,40}$") )
-      ' < edge.json
+      has_sha_file edge.json
     else
       echo "Edge /version non-200 ($CODE) — falling back to backend /version"
       CODE_B=$(curl_backend)
       echo "--- backend /version ($CODE_B) ---"
       jq . < backend.json || cat backend.json || true
       [ "$CODE_B" = "200" ] || { echo "backend /version non-200: $CODE_B"; exit 1; }
-      jq -e '
-        ( .sha? // .commit? // .version? // empty | tostring | test("^[0-9a-fA-F]{7,40}$") )
-        or ( .. | scalars | tostring | test("^[0-9a-fA-F]{7,40}$") )
-      ' < backend.json
+      has_sha_file backend.json
     fi
       - name: Backend health (via domain)
         run: |
