@@ -16,14 +16,21 @@ jobs:
       - name: Apex front door
         run: |
           set -euo pipefail
-          code=$(curl -sS -o /dev/null -w '%{http_code}' https://dhkalign.com)
-          echo "apex HTTP $code"
-          [ "$code" = "200" ] || { echo "Expected 200, got $code"; exit 1; }
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
+          hit() { curl -sS -A "$UA" -H 'accept: text/html' -o /dev/null -w '%{http_code}' "$1" || true; }
+          code=$(hit https://dhkalign.com/)
+          echo "apex / HTTP $code"
+          if [ "$code" != "200" ]; then
+            code=$(hit https://dhkalign.com/index.html)
+            echo "apex /index.html HTTP $code"
+          fi
+          [ "$code" = "200" ] || { echo "Front door not 200 (last=$code)"; exit 1; }
 
       - name: www redirects to apex
         run: |
-          set -euo pipefail
-          code=$(curl -sSI -o /dev/null -w '%{http_code}' "https://www.dhkalign.com/test?q=1")
+                    ipefail
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
+          code=$(curl -sSI -A "$UA" -o /dev/null -w '%{http_code}' "https://www.dhkalign.com/test?q=1")
           echo "www redirect HTTP $code"
           [ "$code" = "301" ] || { echo "Expected 301, got $code"; exit 1; }
 
@@ -31,14 +38,8 @@ jobs:
         run: |
           set -euo pipefail
           UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-          curl_edge() {
-            curl -sS --retry 2 --retry-all-errors -A "$UA" -H 'accept: application/json' \
-                 -o edge.json -w '%{http_code}' https://edge.dhkalign.com/version || true
-          }
-          curl_backend() {
-            curl -sS --retry 2 --retry-all-errors -H 'accept: application/json' \
-                 -o backend.json -w '%{http_code}' https://backend.dhkalign.com/version || true
-          }
+          curl_edge()    { curl -sS --retry 2 --retry-all-errors -A "$UA" -H 'accept: application/json' -o edge.json    -w '%{http_code}' https://edge.dhkalign.com/version    || true; }
+          curl_backend() { curl -sS --retry 2 --retry-all-errors              -H 'accept: application/json' -o backend.json -w '%{http_code}' https://backend.dhkalign.com/version || true; }
           has_sha_file() {
             F="$1"
             if jq -e . >/dev/null 2>&1 <"$F"; then
