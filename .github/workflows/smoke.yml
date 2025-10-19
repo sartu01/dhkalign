@@ -64,6 +64,13 @@ jobs:
           fi
 
       - name: Backend health
+      - name: Go sidecar health (non-blocking)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o go.json -w '%{http_code}' https://dhkalign-backend-go.fly.dev/go/health || true)
+          echo "go sidecar /health $code"
+          jq . < go.json || cat go.json || true
         continue-on-error: true
         run: |
           set -euo pipefail
