@@ -27,8 +27,8 @@ jobs:
           [ "$code" = "200" ] || { echo "Front door not 200 (last=$code)"; exit 1; }
 
       - name: www redirects to apex
-        run: |
-                    ipefail
+          n: |
+          set -euo pipefail
           UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
           code=$(curl -sSI -A "$UA" -o /dev/null -w '%{http_code}' "https://www.dhkalign.com/test?q=1")
           echo "www redirect HTTP $code"
