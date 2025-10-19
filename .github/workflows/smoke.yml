@@ -26,7 +26,7 @@ jobs:
 
       - name: Edge version (CI-safe, backend fallback)
         run: |
-          set -euo         
+          set -euo pipefail
           UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
           curl_edge() {
             curl -sS --retry 2 --retry-all-errors -A "$UA" -H 'accept: application/json' \
