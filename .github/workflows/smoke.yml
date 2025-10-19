@@ -29,7 +29,7 @@ jobs:
       - name: www redirects to apex
         run: |
           set -euo pipefail
-          UA="Mo illa/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
           code=$(curl -sSI -A "$UA" -o /dev/null -w '%{http_code}' "https://www.dhkalign.com/test?q=1")
           echo "www redirect HTTP $code"
           [ "$code" = "301" ] || { echo "Expected 301, got $code"; exit 1; }
