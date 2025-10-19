@@ -1,0 +1,54 @@
+name: Smoke
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '17 * * * *'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Install jq
+        run: sudo apt-get update -y && sudo apt-get install -y jq
+
+      - name: Edge health
+        run: |
+          set -e; curl -fsSL --retry 3 --retry-all-errors --max-time 20 -H 'accept: application/json' https://edge.dhkalign.com/version \
+          | jq -e '(.sha? != null) or (.data?.sha? != null)' \
+          || (echo '--- edge body ---'; curl -fsSL https://edge.dhkalign.com/version; exit 1)
+
+      - name: Backend health (via domain)
+        run: |
+          set -e; curl -fsSL --retry 3 --retry-all-errors --max-time 20 -H 'accept: application/json' https://backend.dhkalign.com/health \
+          | jq -e '(.ok==true) or (.status=="ok")' \
+          || (echo '--- backend body ---'; curl -fsSL https://backend.dhkalign.com/health; exit 1)
+
+      - name: Free translate (1) via Worker
+        run: |
+          set -e; curl -fsSL --retry 3 --retry-all-errors --max-time 20 'https://edge.dhkalign.com/translate?q=Rickshaw%20pabo%20na' \
+          | jq -e '(.ok==true) or (.translation!=null) or (.result!=null)' \
+          || (echo '--- translate (1) body ---'; curl -fsSL 'https://edge.dhkalign.com/translate?q=Rickshaw%20pabo%20na'; exit 1)
+
+      - name: Free translate (2) via Worker
+        run: |
+          set -e; curl -fsSL --retry 3 --retry-all-errors --max-time 20 'https://edge.dhkalign.com/translate?q=Rickshaw%20pabo%20na' \
+          | jq -e '(.ok==true) or (.translation!=null) or (.result!=null)' \
+          || (echo '--- translate (2) body ---'; curl -fsSL 'https://edge.dhkalign.com/translate?q=Rickshaw%20pabo%20na'; exit 1)
+
+      - name: Pro translate (skip on PR)
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          PROD_API_KEY: ${{ secrets.PROD_API_KEY }}
+        run: |
+          set -e; MISS="gpt_probe_$(date +%s)"; \
+          curl -fsSL --retry 3 --retry-all-errors --max-time 30 -X POST 'https://edge.dhkalign.com/translate/pro' \
+            -H 'content-type: application/json' -H "x-api-key: $PROD_API_KEY" \
+            -d "{\"text\":\"$MISS\",\"src_lang\":\"bn-rom\",\"tgt_lang\":\"en\"}" \
+          | jq -e '(.ok==true) or (.translation!=null) or (.result!=null)' \
+          || (echo '--- pro body ---'; curl -fsSL -X POST 'https://edge.dhkalign.com/translate/pro' \
+                -H 'content-type: application/json' -H "x-api-key: $PROD_API_KEY" \
+                -d "{\"text\":\"$MISS\",\"src_lang\":\"bn-rom\",\"tgt_lang\":\"en\"}"; exit 1)
