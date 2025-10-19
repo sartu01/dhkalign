@@ -1,33 +1,29 @@
 version: 2
 updates:
+  # Keep other ecosystems here if you use them (python, github-actions, etc.)
   - package-ecosystem: "npm"
     directory: "/frontend"
-    schedule: { interval: "weekly" }
-    open-pull-requests-limit: 5
-    allow:
-      - dependency-type: "direct"
+    schedule:
+      interval: "weekly"
+    # group everything, but restrict to patch/minor
     groups:
-      security-fixes:
-        applies-to: security-updates
-        update-types: [ "patch", "minor" ]
-      weekly-batch:
-        applies-to: version-updates
-        patterns: [ "*" ]
-    commit-message: { prefix: "deps(npm)" }
-    rebase-strategy: "auto"
-
-  - package-ecosystem: "pip"
-    directory: "/backend"
-    schedule: { interval: "weekly" }
-    open-pull-requests-limit: 5
-    allow:
-      - dependency-type: "direct"
-    groups:
-      security-fixes:
-        applies-to: security-updates
-        update-types: [ "patch", "minor" ]
-      weekly-batch:
-        applies-to: version-updates
-        patterns: [ "*" ]
-    commit-message: { prefix: "deps(pip)" }
-    rebase-strategy: "auto"
+      frontend-weekly:
+        patterns: ["*"]
+        update-types:
+          - "version-update:semver-patch"
+          - "version-update:semver-minor"
+    ignore:
+      # Block *all* majors temporarily
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      # Hard block ESLint >=9 specifically (even if minor)
+      - dependency-name: "eslint"
+        versions: [">=9"]
+      # Block @typescript-eslint majors explicitly
+      - dependency-name: "@typescript-eslint/*"
+        update-types: ["version-update:semver-major"]
+      # Block React 19 majors explicitly
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
