@@ -16,12 +16,15 @@ jobs:
       - name: Apex front door
         run: |
           set -euo pipefail
-          curl -sI https://dhkalign.com | head -n1 | grep -E ' 200 '
+          code=$(curl -sS -o /dev/null -w '%{http_code}' https://dhkalign.com)
+          echo "apex HTTP $code"
+          [ "$code" = "200" ] || { echo "Expected 200, got $code"; exit 1; }
 
       - name: www redirects to apex
         run: |
           set -euo pipefail
-          code=$(curl -s -o /dev/null -w '%{http_code}' "https://www.dhkalign.com/test?q=1")
+          code=$(curl -sSI -o /dev/null -w '%{http_code}' "https://www.dhkalign.com/test?q=1")
+          echo "www redirect HTTP $code"
           [ "$code" = "301" ] || { echo "Expected 301, got $code"; exit 1; }
 
       - name: Edge version (CI-safe, backend fallback)
