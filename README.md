@@ -1,90 +1,165 @@
-# DHK Align — Public README
+# DHK Align — Public README (Oct 2025)
 
-DHK Align is an open-core, security-first Banglish ⇄ English translation engine designed to provide high-quality translations with flexible tiers.
+**DHK Align** is an open‑core, security‑first Banglish ⇄ English translation engine with a hardened **Cloudflare Edge** and two origins on **Fly.io** (Python FastAPI in prod, Go sidecar for parity). Frontend is a Cloudflare Pages SPA.
 
 ---
 
-## Overview
+## Stack at a glance
 
-DHK Align offers two tiers:
-
-- **Free Tier:** React SPA frontend with safe data, no API key required, limited to free translation packs.
-- **Pro Tier:** API-key gated endpoints supporting premium packs and usage tracking, with optional GPT-4o-mini fallback for enhanced translation quality.
-
-The system is built with a Cloudflare Worker as the public ingress and a Fly.io-hosted FastAPI backend that handles translation requests, caching, and metrics. GPT-4o-mini fallback is enabled to provide translations when the database does not have a match.
+- **Edge (Cloudflare Worker)**
+  - Routes: `GET /edge/health`, `GET /version`, `GET /api/translate?q=…` (free), `POST /translate` (free, JSON), `POST /translate/pro` (Pro, `x-api-key`, GPT fallback + DB backfill).
+  - Hardened: strict CORS (apex/www + localhost in dev), CSP/HSTS/Referrer‑Policy/X‑Content‑Type‑Options/Permissions‑Policy, sanitized 5xx. Stripe webhook exempt from Edge‑Shield; signature verified at origin.
+- **Origins (Fly.io)**
+  - **FastAPI (prod)**: `GET /health`, `GET /version`, DB lookups, GPT‑4o‑mini fallback (optional), metrics, audit.
+  - **Go sidecar (parity pilot)**: `GET /go/health`, `GET /go/version`, `GET /go/translate?q=…` (stub echo). Deployed and **parked (scale=0)** by default.
+- **Frontend (Cloudflare Pages)**: SPA; output `frontend/dist/`. `_headers` and `_redirects` in place; SPA fallback `/* /index.html 200`.
+- **Data**: SQLite (low‑cost). Future: Litestream S3 backup.
+- **CI / Protections**
+  - Required checks on `main`: **`Cloudflare Pages`** and **`smoke`** (speed mode). CodeQL runs but is **not** required.
+  - **Smoke** validates apex/redirects, Edge `/version`, backend health (tolerant), Go sidecar health (non‑blocking, host auto‑derived from `backend-go/fly.toml`), free translate (tolerant).
 
 ---
 
 ## Quick Start (Development)
 
-**Prerequisites:**  
-- Python >= 3.11  
-- Node.js >= 18  
-- jq, sqlite3, cloudflared, wrangler  
+**Prereqs**: Python ≥ 3.11, Node ≥ 18, `jq`, `sqlite3`, `cloudflared`, `wrangler`, `gh` (GitHub CLI), `flyctl`.
 
-**Start Backend Server:**  
+### Backend (FastAPI) + Worker (local)
 ```bash
+# repo root
 cd ~/Dev/dhkalign
+
+# run FastAPI (uses PORT=8090)
 export EDGE_SHIELD_TOKEN="$(grep -m1 '^EDGE_SHIELD_TOKEN=' infra/edge/.dev.vars | cut -d= -f2)" \
-  EDGE_SHIELD_ENFORCE=1 BACKEND_CACHE_TTL=180
-./scripts/run_server.sh   # Backend runs on http://127.0.0.1:8090
+       EDGE_SHIELD_ENFORCE=1 BACKEND_CACHE_TTL=180
+./scripts/run_server.sh    # http://127.0.0.1:8090
+
+# run Worker (dev)
+cd infra/edge
+BROWSER=false wrangler dev --local --ip 127.0.0.1 --port 8789 --config wrangler.toml
+# http://127.0.0.1:8789
 ```
 
-**Start Cloudflare Worker:**  
+### Go sidecar (Fly.io) — build & deploy
+
+The app name is stored in `backend-go/fly.toml` (`app = "<name>"`). Your **Personal** org slug is `personal`.
+
 ```bash
-cd ~/Dev/dhkalign/infra/edge
-BROWSER=false wrangler dev --local --ip 127.0.0.1 --port 8789 --config wrangler.toml
-# Worker runs on http://127.0.0.1:8789
+cd ~/Dev/dhkalign/backend-go
+APP="$(awk -F\" '/^app = /{print $2}' fly.toml)"; ORG="personal"
+flyctl auth whoami >/dev/null 2>&1 || flyctl auth login
+# create if missing
+flyctl apps list | awk -v a="$APP" '$1==a{f=1} END{exit !f}' || flyctl apps create "$APP" -o "$ORG" --yes
+
+# build metadata + deps cache-bust (forces fresh go.mod/go.sum resolution on remote builder)
+COMMIT_SHA="$(git -C .. rev-parse --short HEAD 2>/dev/null || echo dev)"
+BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+DEPS_SHA="$(shasum -a 256 go.mod | awk '{print $1}')-$(date +%s)"
+
+flyctl deploy --remote-only -a "$APP" \
+  --build-arg COMMIT_SHA="$COMMIT_SHA" \
+  --build-arg BUILD_TIME="$BUILD_TIME" \
+  --build-arg DEPS_SHA="$DEPS_SHA" \
+  --yes
+
+# sanity
+URL="https://$APP.fly.dev"
+curl -fsS "$URL/go/health"    | jq .
+curl -fsS "$URL/go/version"   | jq .
+curl -fsS "$URL/go/translate?q=Rickshaw%20pabo%20na" | jq .
+
+# cost guard (park when idle)
+flyctl scale count 0 -a "$APP"
 ```
 
 ---
 
-## Architecture
+## One‑minute verification (prod)
 
-- **Frontend:** React SPA for free-tier users, communicating exclusively with the Cloudflare Worker.
-- **Cloudflare Worker:** Handles all public requests, enforces CORS, rate limits, API key validation, and caching.
-- **Backend (Fly.io):** FastAPI service managing translation logic, database access, GPT fallback, metrics, and audit logging.
-- **Caching:** Two-layer caching with edge cache and backend TTL cache to optimize response times.
-- **Translation Flow:** DB-first lookup → GPT-4o-mini fallback (if enabled) → auto-insert into DB → serve response.
+```bash
+# front door
+curl -sI https://dhkalign.com | head -n1
+curl -I "https://www.dhkalign.com/test?q=1"   # expect 301 → apex
+
+# edge + backend
+curl -fsS https://edge.dhkalign.com/version | jq
+curl -fsS https://backend.dhkalign.com/health | jq
+
+# free translate
+curl -fsS 'https://edge.dhkalign.com/api/translate?q=Rickshaw%20pabo%20na' | jq
+# POST (JSON)
+curl -fsS -X POST 'https://edge.dhkalign.com/translate' -H 'content-type: application/json' -d '{"q":"Rickshaw pabo na"}' | jq
+```
 
 ---
 
 ## Security
 
-- **Edge Shield:** Cloudflare Worker authenticates to backend using a secret token (`x-edge-shield` header).
-- **API Authentication:** Pro endpoints require a valid `x-api-key`; admin endpoints require `x-admin-key`.
-- **Rate Limiting:** Daily quotas per API key at the edge; IP-level limits on backend.
-- **Audit Logs:** Append-only, HMAC-signed logs ensure traceability without storing user text.
-- **Stripe Webhook:** Securely validated with signature and replay protection.
-- **CORS:** Strictly enforced on all incoming requests.
-- **Billing Key Endpoint:** Secure, single-use key retrieval restricted to allowlisted origins.
+- **Edge‑Shield**: Worker authenticates to origin via `x-edge-shield` secret; clients never send it.
+- **Security headers**: `Content-Security-Policy`, `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
+- **Cache headers**: `CF-Cache-Edge: HIT|MISS` at edge; `X-Backend-Cache: HIT|MISS` when edge is bypassed.
+- **Pro auth**: `x-api-key` on `/translate/pro`; admin: `x-admin-key`.
+- **Rate limits**: IP + key quotas at edge; backend sliding windows.
+- **Audit**: append‑only, HMAC‑signed; no user text stored.
+- **Stripe**: webhook signature verify + replay protection.
+- **CORS**: strict allowlist.
 
 ---
 
 ## Environment Variables
 
-- `EDGE_SHIELD_TOKEN` — Secret token for backend authentication.
-- `EDGE_SHIELD_ENFORCE` — Enable edge shield token enforcement.
-- `BACKEND_CACHE_TTL` — Backend cache TTL in seconds.
-- `CORS_ORIGINS` — Allowed origins for CORS.
+**Worker**
+- `EDGE_SHIELD_TOKEN`, `EDGE_SHIELD_ENFORCE`, `CORS_ORIGINS`
 
-### Backend (Fly.io) Variables
+**Backend (FastAPI / Fly)**
+- `OPENAI_API_KEY` (if GPT fallback on), `ENABLE_GPT_FALLBACK=1`, `GPT_MODEL=gpt-4o-mini`, `GPT_MAX_TOKENS=128`, `GPT_TIMEOUT_MS=2000`
 
-- `OPENAI_API_KEY` — OpenAI API key (required if GPT fallback enabled).
-- `ENABLE_GPT_FALLBACK` — Set to `1` to enable GPT-4o-mini fallback.
-- `GPT_MODEL` — Model name (default: `gpt-4o-mini`).
-- `GPT_MAX_TOKENS` — Max tokens for GPT responses (default: `128`).
-- `GPT_TIMEOUT_MS` — Timeout for GPT calls in milliseconds (default: `2000`).
+**Go sidecar**
+- `PORT` (default `8080`), `COMMIT_SHA`, `BUILD_TIME`
+
+---
+
+## Endpoints
+
+**Edge**
+- `GET /edge/health`, `GET /version`
+- `GET /api/translate?q=…` (free)
+- `POST /translate` (free, JSON)
+- `POST /translate/pro` (Pro, `x-api-key`)
+
+**FastAPI**
+- `GET /health`, `GET /version`
+
+**Go (parity)**
+- `GET /go/health`, `GET /go/version`, `GET /go/translate?q=…` (stub)
+
+---
+
+## CI / Branch Protection
+
+- Required on `main`: `["Cloudflare Pages","smoke"]`
+- **Smoke**: apex 200; `www` → apex 301; Edge `/version` tolerant; backend health tolerant + Fly fallback; Go sidecar health (non‑blocking, host auto‑derived); free translate GET+POST (tolerant).
+- Trigger on your branch:
+  ```bash
+  gh workflow run ".github/workflows/smoke.yml" -r "$(git rev-parse --abbrev-ref HEAD)"
+  ```
+
+---
+
+## Roadmap
+
+- Implement real `/go/translate` (DB + caching), then partial routing from Worker for parity tests.
+- Stripe UI on Pages: add CSP to allow `js.stripe.com` and `hooks.stripe.com`; host Apple Pay association file.
+- Vite migration PR (no traffic switch; build to `frontend/dist/`).
+- Scraping pipeline (colly/chromedp) with SQLite ingest and validators.
 
 ---
 
 ## Contact
-
-For inquiries or security issues, please reach out to:
 
 - Info: [info@dhkalign.com](mailto:info@dhkalign.com)  
 - Security: [admin@dhkalign.com](mailto:admin@dhkalign.com)
 
 ---
 
-*© 2025 DHK Align. Code licensed under MIT. Data is proprietary.*
+© 2025 DHK Align. Code under MIT; data proprietary.

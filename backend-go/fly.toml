@@ -1,0 +1,31 @@
+app = "dhkalign-backend-go-sartu-1760913318"
+primary_region = "iad"
+[build]
+  dockerfile = "Dockerfile"
+  [build.args]
+    COMMIT_SHA = ""
+    BUILD_TIME = ""
+    DEPS_SHA = ""
+[env]
+  PORT = "8080"
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+[http_service.concurrency]
+  type = "requests"
+  soft_limit = 20
+  hard_limit = 40
+[checks]
+  [checks.health]
+    port = 8080
+    type = "http"
+    interval = "15s"
+    timeout = "2s"
+    method = "get"
+    path = "/go/health"
+
+[vm]
+  size = "shared-cpu-1x"
