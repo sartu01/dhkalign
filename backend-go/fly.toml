@@ -2,6 +2,10 @@ app = "dhkalign-backend-go-sartu-1760913318"
 primary_region = "iad"
 [build]
   dockerfile = "Dockerfile"
+  [build.args]
+    COMMIT_SHA = ""
+    BUILD_TIME = ""
+    DEPS_SHA = ""
 [env]
   PORT = "8080"
 [http_service]

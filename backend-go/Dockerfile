@@ -4,7 +4,8 @@ WORKDIR /src
 
 # Cache deps first
 COPY go.mod go.sum* ./
-RUN go mod download
+ARG DEPS_SHA=""
+RUN echo "$DEPS_SHA" >/dev/null && go mod download
 
 # Source
 COPY . .
