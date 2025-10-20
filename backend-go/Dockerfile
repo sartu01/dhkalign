@@ -2,15 +2,16 @@
 FROM golang:1.22-alpine AS build
 WORKDIR /src
 
-# Cache deps first
+# Cache deps first (allows remote builder to reuse this when go.mod/go.sum unchanged)
 COPY go.mod go.sum* ./
 ARG DEPS_SHA=""
 RUN echo "$DEPS_SHA" >/dev/null && go mod download
 
-# Source
+# Copy source and ensure go.sum is fully populated for imports
 COPY . .
+RUN go mod tidy
 
-# Optional build metadata (passed by CI/Fly as --build-arg; defaults are safe)
+# Optional build metadata (passed by CI/Fly)
 ARG COMMIT_SHA=dev
 ARG BUILD_TIME=
 
