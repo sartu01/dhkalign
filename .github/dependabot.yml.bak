@@ -1,0 +1,33 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule: { interval: "weekly" }
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
+    groups:
+      security-fixes:
+        applies-to: security-updates
+        update-types: [ "patch", "minor" ]
+      weekly-batch:
+        applies-to: version-updates
+        patterns: [ "*" ]
+    commit-message: { prefix: "deps(npm)" }
+    rebase-strategy: "auto"
+
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule: { interval: "weekly" }
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
+    groups:
+      security-fixes:
+        applies-to: security-updates
+        update-types: [ "patch", "minor" ]
+      weekly-batch:
+        applies-to: version-updates
+        patterns: [ "*" ]
+    commit-message: { prefix: "deps(pip)" }
+    rebase-strategy: "auto"
