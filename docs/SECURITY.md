@@ -15,9 +15,10 @@ This document states the deployed security model for DHK Align. It aligns with `
 ### Truth table (client surface)
 | Surface (client calls)    | `x-edge-shield` | `x-api-key` | `x-admin-key` |
 |---------------------------|----------------:|------------:|--------------:|
-| Edge `/translate` (free)  | No              | No          | No            |
-| Edge `/translate/pro`     | No              | **Yes**     | No            |
-| Edge `/admin/keys/*`      | No              | No          | **Yes**       |
+| Edge `/api/translate` (free GET) | No | No | No |
+| Edge `POST /translate` (free POST) | No | No | No |
+| Edge `/translate/pro` | No | **Yes** | No |
+| Edge `/admin/*` | No | No | **Yes** |
 
 > **Origin is private.** The Worker injects `x-edge-shield:<token>` when calling the origin. Clients never send `x-edge-shield`.
 
@@ -33,13 +34,14 @@ This document states the deployed security model for DHK Align. It aligns with `
   - `CACHE` — response cache; header `CF-Cache-Edge: HIT|MISS`.
   - `USAGE` — counters, replay locks, API key store.
 - **CORS:** allowlist domains only (prod: `dhkalign.com`, `www.dhkalign.com`; dev: `127.0.0.1:5173`).
-- **Admin routes:** `/admin/health`, `/admin/cache_stats`, `/admin/keys/add|check|del` (GET `?key=…` and optional POST JSON if enabled).
+- **Admin routes:** `/admin/health`, `/admin/cache_stats`, `/admin/whoami`, `/admin/keys/add|check|del` (GET `?key=…` and optional POST JSON if enabled).
+- **Security headers:** `Content-Security-Policy`, `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
 - **Billing handoff:** `/billing/key?session_id=…` returns key once; then mapping is deleted.
 
 ---
 ## 4) Backend Security (Fly.io FastAPI)
 - **Shield enforcement:** requests must include valid `x-edge-shield` (set by Worker).
-- **Routes:** `/health`, `/translate` (free), `/translate/pro` (Pro), `/metrics` (Prometheus).
+- **Routes:** `/health`, `/version`, `/translate` (free), `/translate/pro` (Pro), `/metrics` (Prometheus).
 - **JSON‑only errors:** `{ ok:false, error:"…" }`; never HTML error bodies.
 - **Rate limits:** IP‑level SlowAPI (60/min) when enabled on `/translate*`.
 - **Caching:**
@@ -71,7 +73,7 @@ This document states the deployed security model for DHK Align. It aligns with `
   script-src 'self' https://js.stripe.com 'nonce-__NONCE__';
   style-src 'self' 'nonce-__NONCE__';
   img-src 'self' data: https:;
-  connect-src 'self' https://<YOUR-WORKER-PROD-HOST> https://backend.dhkalign.com;
+  connect-src 'self' https://edge.dhkalign.com https://backend.dhkalign.com;
   frame-src https://js.stripe.com;
   object-src 'none'; base-uri 'self'; upgrade-insecure-requests">
 ```

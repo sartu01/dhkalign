@@ -1,59 +1,51 @@
-# DHK Align — Property Defense & Abuse Response
+# DHK Align — Property Defense & Abuse Response (Oct 2025)
 
-_Last updated: 2025‑09‑22_
-
-This document outlines how DHK Align protects its code, data, and runtime property; detects abuse; and responds using defined runbooks. It complements `README.md`, `docs/SECURITY.md`, `docs/ARCHITECTURE.md`, `docs/PRIVACY.md`, and `docs/EXECUTION_DELIVERABLES.md`.
+_This policy explains how DHK Align protects code, data, and runtime property; detects abuse; and executes runbooks. It complements `README.md`, `docs/ARCHITECTURE.md`, `docs/OPS.md`, `docs/PRIVACY.md`, and `docs/API.md`._
 
 ---
 
 ## 0) Golden Invariants
 
-- **Edge-only ingress:** Clients call the Cloudflare Worker; only the Worker calls the private origin with header `x-edge-shield`. Clients never send this header.
-- **Admin guard:** All `/admin/*` endpoints require `x-admin-key`.
-- **Free route:** `/translate` supports POST `{"text":"…"}` and GET `?q=`.
-- **Pro route:** `/translate/pro` at Edge requires `x-api-key`; origin trusts only requests with `x-edge-shield`.
-- **Pro fallback (optional):** DB-first → GPT fallback (if enabled) → auto-insert → serve.
-- **Quotas & rate limits:** Edge enforces daily per-key quota (KV); origin SlowAPI 60/min when enabled.
-- **One-time key handoff:** `/billing/key?session_id=…` returns once; origin allowlisted.
-- **No text storage by default:** Edge does not store translation text; origin logs avoid full text.
-- **Identity invariant (DB):** Uniqueness on `(src_lang, roman_bn_norm, tgt_lang, pack)`; `id` is cosmetic. Runtime DB at `backend/data/translations.db`.
-- **Licenses:** Code = MIT; Data = Proprietary (see `LICENSE_CODE.md`, `LICENSE_DATA.md`).
+- **Edge‑only ingress**: Clients call the **Cloudflare Worker**; only the Worker calls private origins with `x-edge-shield`. Clients never send this header.  
+- **Admin guard**: All `/admin/*` endpoints require `x-admin-key`.  
+- **Free routes**: `GET /api/translate?q=…`, `POST /translate` (`{"text":"…"}` primary).  
+- **Pro route**: `POST /translate/pro` at Edge requires `x-api-key`; origin trusts requests that include a valid `x-edge-shield`.  
+- **Fallback (optional)**: DB‑first → GPT fallback on miss → auto‑insert → subsequent calls hit DB.  
+- **Quotas & rate limits**: Edge enforces per‑key daily quotas (KV). Origin can enforce 60/min per IP when enabled.  
+- **One‑time key handoff**: `GET /billing/key?session_id=…` returns once; origin allowlisted.  
+- **No text storage by default**: Edge does not persist translation text; origin logs avoid full text.  
+- **DB identity invariant**: Uniqueness on `(src_lang, roman_bn_norm, tgt_lang, pack)`; `id` cosmetic. SQLite at `backend/data/translations.db`.  
+- **Licenses**: Code = MIT; Data = Proprietary. See `LICENSE`, `LICENSE_CODE.md`, `LICENSE_DATA.md`, and `docs/THIRD_PARTY_NOTICES.md`.
 
 ---
 
-## 1) Property Surface & Protections
+## 1) Property Surfaces & Protections
 
-### Code
-- No secrets in git; dev secrets in `infra/edge/.dev.vars`, prod secrets via Wrangler.
-- Commit signing on protected branches.
-- Security scanning: `bandit -r backend/` before PR merge.
+### A) Code
+- **Secrets**: Never committed. Dev in `infra/edge/.dev.vars`; prod via Wrangler/Cloudflare; backend via Fly secrets.  
+- **Branches**: Commit signing + protected branches.  
+- **Scanning**: `bandit -r backend/` (Python); CodeQL on repo (non‑blocking in speed mode).  
+- **Artifacts**: No virtualenvs (`backend/.venv/`) or DB files in git.
 
-### Data (Proprietary)
-- Access only through Edge (Pro requires API key); no public dumps.
-- Deduplication and provenance via invariant key; import pipeline `normalize_jsonl.py → import_clean_jsonl.py`.
-- Optional watermarking (planned): embed low-impact canary pairs per pack for tracing leaks.
+### B) Data (Proprietary)
+- **Access**: Only via Edge; Pro requires `x-api-key`. No public dumps.  
+- **Ingest**: `normalize_jsonl.py → import_clean_jsonl.py` with provenance; dedupe by invariant key.  
+- **Watermarking (planned)**: low‑impact canary pairs per pack to trace leaks.
 
-### Runtime (Edge + Origin)
-- Gating: `x-api-key` on `/translate/pro`; `x-admin-key` on `/admin/*`.
-- Shield: Worker adds `x-edge-shield`; origin rejects Pro requests without it.
-- Quotas: KV daily per-key quota (e.g., 1000/day) → HTTP 429.
-- CORS/CSP: allowlist origins; Stripe host allowed; explicit dev hosts (`127.0.0.1:5173`, `127.0.0.1:8789`).
-- Caching: Edge KV (`CF-Cache-Edge: HIT|MISS`); origin TTL (`X-Backend-Cache: HIT|MISS`); bypass with `?cache=no`.
-- Stripe: Signature check (5-min tolerance), event allowlist (`checkout.session.completed`), KV replay lock; keys stored as `apikey:<key> = "1"`, metadata at `apikey.meta:<key>`.
-- Fallback controls (origin): If enabled, origin calls OpenAI (default `gpt-4o-mini`) with strict limits; first miss auto-inserts a pro row, subsequent calls hit DB. Toggle via Fly secrets.
-
-### Backend Environment Variables
-- `OPENAI_API_KEY` — OpenAI key (sk-…), required if fallback enabled
-- `ENABLE_GPT_FALLBACK` — `1` to enable GPT fallback on DB miss
-- `GPT_MODEL` — model name (default: `gpt-4o-mini`)
-- `GPT_MAX_TOKENS` — max tokens for fallback (default: `128`)
-- `GPT_TIMEOUT_MS` — timeout in ms (default: `2000`)
+### C) Runtime (Edge + Origins)
+- **Gates**: `x-api-key` on `/translate/pro`; `x-admin-key` on `/admin/*`.  
+- **Shield**: Worker injects `x-edge-shield`; origins reject requests without it.  
+- **Quotas**: KV daily per‑key; 429 on exceed.  
+- **CORS/CSP**: allowlist production origins; explicit dev hosts `127.0.0.1:5173` (Vite), `127.0.0.1:8789` (Worker dev).  
+- **Caching**: Edge KV (`CF-Cache-Edge: HIT|MISS`); origin TTL (`X-Backend-Cache: HIT|MISS`); bypass with `?cache=no`.  
+- **Stripe**: Signature verify (5‑minute tolerance), event allowlist (`checkout.session.completed`), KV replay lock; API keys stored as `apikey:<key> = "1"`, metadata under `apikey.meta:<key>`.  
+- **Fallback controls**: If enabled, origin calls OpenAI (default `gpt-4o-mini`) with strict limits; first miss auto‑inserts a pro row.
 
 ---
 
 ## 2) GPT Fallback (Optional)
 
-Enable GPT fallback to serve DB misses with model translations, auto-inserting results:
+Enable fallback to serve Pro DB misses via OpenAI and auto‑insert results (Fly secrets; do **not** commit secrets):
 
 ```bash
 flyctl secrets set -a dhkalign-backend \
@@ -62,137 +54,119 @@ flyctl secrets set -a dhkalign-backend \
   GPT_MODEL='gpt-4o-mini' \
   GPT_MAX_TOKENS='128' \
   GPT_TIMEOUT_MS='2000'
-cd ~/Dev/dhkalign && flyctl deploy -a dhkalign-backend
+flyctl deploy -a dhkalign-backend
 ```
 
-First miss via `/translate/pro` returns `{ ok:true, data:{ …, "source":"gpt" } }`; repeated calls return `{ …, "source":"db" }`.
+First miss returns `"source":"gpt"`; repeats return `"source":"db"`.
 
 ---
 
-## 3) Abuse Taxonomy & Responses
+## 3) Abuse Taxonomy → Signals → Responses
 
-### A) Key Sharing / Bulk Scraping
-**Signal:** Traffic bursts from many IPs on one key; daily quota hits; unusual cache patterns.
+### A) Key sharing / bulk scraping
+**Signals**: bursts across many IPs on one key; daily quota hits; cache anomalies.  
+**Response**:
+1. Throttle or pause key; notify user.  
+2. Mint replacement; disable old (`apikey:<old>` → `0`); rotate.  
+3. If persistent, suspend per ToS.
 
-**Actions:**
-1. Throttle key quota; alert user.
-2. Mint replacement key; disable old key (`USAGE.del apikey:<old>` or set flag to 0); update user.
-3. If abuse continues, suspend key per policy.
-
-**KV ops:**
+**KV ops (dev)**:
 ```bash
-wrangler kv:key put --namespace USAGE apikey:<KEY> 0 --local  # dev
-wrangler kv:key delete --namespace USAGE apikey:<KEY>
+wrangler kv:key put --namespace USAGE apikey:<KEY> 0 --local
+wrangler kv:key delete --namespace USAGE apikey:<KEY> --local
 ```
 
-### B) Exfiltration of Pro Data
-**Signal:** Large portions of Pro translations leaked; unique canaries detected.
+### B) Exfiltration of Pro data
+**Signals**: canary hits in the wild; mirrored corpus.  
+**Response**:
+1. Confirm canary; scope leak.  
+2. Revoke keys; block sessions; rate‑limit ASNs.  
+3. Takedown citing proprietary data license; update release notes; rotate samples.
 
-**Actions:**
-1. Confirm canary hits; scope leak.
-2. Block offending keys and sessions.
-3. Send takedown notice citing proprietary license (`LICENSE_DATA.md`).
-4. Rotate sample keys; update Release notes.
+### C) Origin exposure attempt
+**Signals**: origin hit without shield; 401/403 from origin; Worker logs show direct hits.  
+**Response**: ensure Worker and origin share `EDGE_SHIELD_TOKEN`; enforce in origin middleware; validate CF DNS (orange cloud/Tunnel).
 
-### C) Origin Exposure Attempt
-**Signal:** Origin hit without shield; Worker logs show 403/401 from origin.
+### D) Stripe replay / signature failure
+**Signals**: 400 “signature verification failed”.  
+**Response**: verify prod mode, correct `whsec_…`; rotate if compromised; confirm KV replay lock.
 
-**Action:** Ensure backend and Worker use the **same** `EDGE_SHIELD_TOKEN`; enforce in origin middleware.
-
-### D) Stripe Replay / Signature Failure
-**Signal:** 400 “signature verification failed”.
-
-**Action:** Verify prod mode and `whsec_…` secret; rotate and redeploy if compromised.
-
-### E) GPT Misuse / Cost Spike
-**Signal:** Surge of 404→200 (GPT) misses; high OpenAI usage; repeated novel phrases.
-
-**Actions:**
-1. Disable fallback temporarily:
+### E) GPT misuse / cost spike
+**Signals**: surge of 404→200 (gpt) misses; rapid novel phrases; OpenAI usage spike.  
+**Response**:
+1. Temporarily disable fallback:
    ```bash
    flyctl secrets set -a dhkalign-backend ENABLE_GPT_FALLBACK='0'
-   cd ~/Dev/dhkalign && flyctl deploy -a dhkalign-backend
+   flyctl deploy -a dhkalign-backend
    ```
-2. Lower caps: reduce `GPT_MAX_TOKENS`, increase `GPT_TIMEOUT_MS`, or set `GPT_RETRIES=0`.
-3. Inspect keys generating most GPT misses; throttle or re-key.
-4. Seed packs with frequent GPT phrases to reduce misses.
-
-**Follow-up:** Add monitoring for `db_hit`, `gpt_fallback`, and `gpt_fail` counts; alert on spikes.
+2. Lower caps: reduce `GPT_MAX_TOKENS`, increase `GPT_TIMEOUT_MS`; set retries to 0.  
+3. Identify abusive keys; throttle or re‑key; seed packs with repeated GPT phrases.
 
 ---
 
 ## 4) Incident Runbooks
 
-### Free 530 (Worker → Origin Upstream)
+**Edge 5xx spike (version fails)**  
+- Check Smoke on main.  
+- Cloudflare → WAF → Rules: ensure no rule blocks `/version`.
+
+**Origin 403 (shield)**  
 ```bash
-curl -is https://backend.dhkalign.com/health | sed -n '1,2p'
-cloudflared tunnel run dhkalign-origin  # or --protocol http2
+# Worker
+cd infra/edge && wrangler secret put EDGE_SHIELD_TOKEN --env production && wrangler deploy --env production
+# Origin (Fly)
+flyctl secrets set -a dhkalign-backend EDGE_SHIELD_TOKEN='<same>' && flyctl deploy -a dhkalign-backend
 ```
 
-### Origin 403 (Shield)
+**Stripe signature failure**  
 ```bash
-cd infra/edge
-wrangler secret put EDGE_SHIELD_TOKEN --env production
-wrangler deploy --env production
-# restart backend with same EDGE_SHIELD_TOKEN
+cd infra/edge && wrangler secret put STRIPE_WEBHOOK_SECRET --env production && wrangler deploy --env production
 ```
 
-### Stripe Signature Failure
-```bash
-cd infra/edge
-wrangler secret put STRIPE_WEBHOOK_SECRET --env production  # paste whsec_…
-wrangler deploy --env production
-```
-
-### Admin Not Locked
-Ensure global guard in Worker:
+**Admin not locked** (Worker guard)
 ```js
 if (url.pathname.startsWith('/admin/')) {
   const got = request.headers.get('x-admin-key') || '';
-  if (!env.ADMIN_KEY || got !== env.ADMIN_KEY) {
-    return json({ error: 'unauthorized' }, 401);
-  }
+  if (!env.ADMIN_KEY || got !== env.ADMIN_KEY) return json({ error: 'unauthorized' }, 401);
 }
 ```
-
-See also Security Runbook → G) Pro returns 404 on a miss (fallback expected).
 
 ---
 
 ## 5) Evidence & Audit
 
-- KV footprints: `usage:<key>:<YYYY-MM-DD>`, `session_to_key:<sessionId>`, `apikey:<key>`, `apikey.meta:<key>`, `stripe_evt:<eventId>`.
-- Logs: Worker tail (prod), origin ASGI logs (no full text), tunnel logs. Retain security/audit logs ≤ 180 days.
-- Backups: run `scripts/backup_db.sh`; verify restores quarterly.
+- **KV footprints**: `usage:<key>:<YYYY-MM-DD>`, `session_to_key:<sessionId>`, `apikey:<key>`, `apikey.meta:<key>`, `stripe_evt:<eventId>`.  
+- **Logs**: Worker tail (prod), origin ASGI logs (no full text), Tunnel logs. Retain security/audit logs ≤ 180 days.  
+- **Backups**: `scripts/backup_db.sh` (manual). Verify restores quarterly. Future: Litestream/LiteFS.
 
 ---
 
 ## 6) Legal Posture
 
-- **Code (MIT):** permissive reuse; retain attribution.
-- **Data (Proprietary):** no redistribution, scraping; DMCA/takedown for leaks.
-- **ToS:** prohibit key sharing, scraping, and automated bulk extraction.
+- **Code**: MIT (retain attribution).  
+- **Data**: Proprietary (no redistribution/scraping). Use takedown for leaks.  
+- **Notices**: Keep `docs/THIRD_PARTY_NOTICES.md` in repo and ship with public images.
 
 ---
 
-## 7) On-call Smoke Tests
+## 7) On‑call Smoke Tests
 
 ```bash
-# Worker & origin health
-curl -is https://<WORKER_HOST>/edge/health | sed -n '1,2p'
-curl -is https://backend.dhkalign.com/health | sed -n '1,2p'
+# Edge & origin health (prod)
+curl -is https://edge.dhkalign.com/edge/health   | sed -n '1,2p'
+curl -is https://backend.dhkalign.com/health     | sed -n '1,2p'
 
-# Free (POST + GET)
-curl -is -X POST https://<WORKER_HOST>/translate -H 'content-type: application/json' -d '{"text":"Bazar korbo"}' | sed -n '1,2p'
-curl -is 'https://<WORKER_HOST>/translate?q=Bazar%20korbo' | sed -n '1,2p'
+# Free (through Edge)
+curl -is 'https://edge.dhkalign.com/api/translate?q=Rickshaw%20pabo%20na' | sed -n '1,2p'
 
 # Stripe bad signature
-curl -is -X POST https://<WORKER_HOST>/webhook/stripe -H 'stripe-signature: test' -d '{}' | sed -n '1,3p'
+curl -is -X POST https://edge.dhkalign.com/webhook/stripe \
+  -H 'stripe-signature: test' -d '{}' | sed -n '1,3p'
 ```
 
 ---
 
 ## 8) Contacts
 
-- Ops & Security: **admin@dhkalign.com**
+- Ops & Security: **admin@dhkalign.com**  
 - Legal notices: **admin@dhkalign.com** (subject: _Takedown Notice_)
