@@ -12,10 +12,12 @@
     "lint": "eslint src --ext .js,.jsx",
     "lint:fix": "eslint src --ext .js,.jsx --fix",
     "dev": "vite",
-    "preview": "vite preview",
-    "cra:start": null,
+    "preview": "vite preview --port 5173",
     "cra:build": "vite build",
-    "cra:test": null
+    "start": "vite",
+    "vite:dev": "vite",
+    "vite:build": "vite build",
+    "vite:preview": "vite preview --port 5173"
   },
   "eslintConfig": {
     "env": {
