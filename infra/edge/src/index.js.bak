@@ -87,29 +87,6 @@ export default {
     }
 
     // Per-key daily quota on translate routes
-  // Free POST alias: /translate → /api/translate?q=...
-  {
-    const url = new URL(request.url);
-    if (request.method === 'POST' && url.pathname === '/translate') {
-      try {
-        const body = await request.json();
-        const q = body?.q ?? '';
-        if (!q) {
-          return new Response(JSON.stringify({ error: 'q required' }), {
-            status: 400, headers: { 'content-type': 'application/json' }
-          });
-        }
-        const proxy = new URL('/api/translate', url.origin);
-        proxy.searchParams.set('q', String(q));
-        return Response.redirect(proxy.toString(), 303);
-      } catch {
-        return new Response(JSON.stringify({ error: 'bad_json' }), {
-          status: 400, headers: { 'content-type': 'application/json' }
-        });
-      }
-    }
-  }
-
     if (url.pathname.startsWith('/translate')) {
       const quotaResp = await enforceQuota(request, env);
       if (quotaResp) return quotaResp;
