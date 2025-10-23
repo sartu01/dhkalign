@@ -52,9 +52,11 @@
   "devDependencies": {
     "@babel/eslint-parser": "7.28.4",
     "@eslint/js": "9.38.0",
+    "@types/node": "^24.9.1",
     "@vitejs/plugin-react": "^5.0.4",
     "eslint": "9.38.0",
     "globals": "^16.4.0",
+    "typescript": "^5.9.3",
     "vite": "^7.1.11"
   },
   "start": "vite",
