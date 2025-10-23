@@ -1,0 +1,14 @@
+name: Bug report
+description: Report a problem or regression
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes: { label: What happened?, description: Describe the bug and expected behavior. }
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes: { label: Reproduction steps }
+  - type: input
+    id: env
+    attributes: { label: Environment, placeholder: OS, browser/version, etc. }
