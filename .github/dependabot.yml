@@ -15,6 +15,7 @@ updates:
         patterns: [ "*" ]
     commit-message: { prefix: "deps(npm)" }
     rebase-strategy: "auto"
+    labels: ["dependencies"]
 
   - package-ecosystem: "pip"
     directory: "/backend"
@@ -31,3 +32,21 @@ updates:
         patterns: [ "*" ]
     commit-message: { prefix: "deps(pip)" }
     rebase-strategy: "auto"
+    labels: ["dependencies"]
+
+  - package-ecosystem: "gomod"
+    directory: "/backend-go"
+    schedule: { interval: "weekly" }
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: "direct"
+    groups:
+      security-fixes:
+        applies-to: security-updates
+        update-types: [ "patch", "minor" ]
+      weekly-batch:
+        applies-to: version-updates
+        patterns: [ "*" ]
+    commit-message: { prefix: "deps(go)" }
+    rebase-strategy: "auto"
+    labels: ["dependencies"]
