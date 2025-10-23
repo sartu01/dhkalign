@@ -86,7 +86,7 @@ export default {
     }
 
     // Per-key daily quota on free translate routes (/translate and /api/translate)
-    if (url.pathname.starts_with?.('/translate') || url.pathname.startsWith('/api/translate')) {
+    if (url.pathname.startsWith('/translate') || url.pathname.startsWith('/api/translate')) {
       const quotaResp = await enforceQuota(request, env);
       if (quotaResp) return quotaResp;
     }
