@@ -5,7 +5,7 @@ export default [
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx}'],
-    ignores: ['dist/**'],
+    ignores: ['dist/**', 'node_modules/**', '**/__legacy__/**'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -20,11 +20,14 @@ export default [
         require: 'readonly',
       },
     },
+    linterOptions: {
+      reportUnusedDisableDirectives: 'error',
+    },
     rules: {
-      'no-console': 'warn',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-irregular-whitespace': 'off',
-      'no-unused-vars': 'warn',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^(React|_)' }],
     },
   },
 ];
