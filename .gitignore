@@ -126,3 +126,7 @@ infra/edge/.dev.vars
 infra/edge/.dev.vars
 # editor/backups
 *.bak.*
+backend-go/backend-go
+backend-go/bin/
+backend-go/*.exe
+backend-go/*.out
