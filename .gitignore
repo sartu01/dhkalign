@@ -104,28 +104,19 @@ infra/edge/.dev.vars
 # local secrets
 infra/edge/.dev.vars
 
-# local secrets
-infra/edge/.dev.vars
 # editor/backups
 *.bak.*
+
+# Backend local/private secrets (never commit)
+backend/private/
+backend/private/*key*
+backend/private/*.sha256
 
 # local secrets
 infra/edge/.dev.vars
 # editor/backups
 *.bak.*
 
-# local secrets
-infra/edge/.dev.vars
-# editor/backups
-*.bak.*
-
-infra/edge/.dev.vars
-*.bak.*
-
-# local secrets
-infra/edge/.dev.vars
-# editor/backups
-*.bak.*
 backend-go/backend-go
 backend-go/bin/
 backend-go/*.exe
