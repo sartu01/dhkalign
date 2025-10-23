@@ -99,12 +99,15 @@ curl -s -H "x-admin-key: $AK" "http://127.0.0.1:8789/admin/keys/del?key=newkey12
 
 **Free translation**
 ```bash
-# POST (canonical)
+# POST (JSON) — dev Worker
 curl -sX POST http://127.0.0.1:8789/translate \
   -H 'Content-Type: application/json' \
-  -d '{"text":"Bazar korbo"}' | jq
+  -d '{"q":"Bazar korbo"}' | jq
 
-# GET (also supported)
+# GET (canonical path) — dev Worker
+curl -s 'http://127.0.0.1:8789/api/translate?q=Bazar%20korbo' | jq
+
+# GET (legacy path still supported) — dev Worker
 curl -s 'http://127.0.0.1:8789/translate?q=Bazar%20korbo' | jq
 ```
 
@@ -112,18 +115,18 @@ curl -s 'http://127.0.0.1:8789/translate?q=Bazar%20korbo' | jq
 ```bash
 curl -is -X POST http://127.0.0.1:8789/translate \
   -H 'Content-Type: application/json' \
-  -d '{"text":"Bazar korbo"}' | grep CF-Cache-Edge
+  -d '{"q":"Bazar korbo"}' | grep CF-Cache-Edge
 
 curl -is -X POST http://127.0.0.1:8789/translate \
   -H 'Content-Type: application/json' \
-  -d '{"text":"Bazar korbo"}' | grep CF-Cache-Edge
+  -d '{"q":"Bazar korbo"}' | grep CF-Cache-Edge
 ```
 
 **Bypass edge cache (backend TTL)**
 ```bash
 curl -is -X POST "http://127.0.0.1:8789/translate?cache=no" \
   -H 'Content-Type: application/json' \
-  -d '{"text":"Bazar korbo"}' | grep X-Backend-Cache
+  -d '{"q":"Bazar korbo"}' | grep X-Backend-Cache
 ```
 
 **Pro translation** (mint key → call; 200 from DB or 404 if not found unless fallback ON)
@@ -133,7 +136,7 @@ curl -s -H "x-admin-key: $AK" "http://127.0.0.1:8789/admin/keys/add?key=$KEY" | 
 
 curl -is -X POST http://127.0.0.1:8789/translate/pro \
   -H 'Content-Type: application/json' -H "x-api-key: $KEY" \
-  -d '{"text":"jam e pore asi","src_lang":"bn-rom","tgt_lang":"en"}' | head -6
+  -d '{"q":"jam e pore asi","src_lang":"bn-rom","tgt_lang":"en"}' | head -6
 ```
 
 ---
