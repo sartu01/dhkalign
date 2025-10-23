@@ -1,4 +1,3 @@
-
 import { handleStripeWebhook } from './stripe.js';
 
 // Allowed CORS origins (prod + local dev)
@@ -63,7 +62,7 @@ export default {
     // CORS preflight
     if (request.method === 'OPTIONS') return cors(request.headers.get('origin') || '');
 
-    const url = new URL(request.url);
+    let url = new URL(request.url);
     const reqOrigin = request.headers.get('origin') || '';
 
     // Simple root index and favicon to avoid noisy 403s
@@ -86,8 +85,8 @@ export default {
       if (guard) return guard;
     }
 
-    // Per-key daily quota on translate routes
-    if (url.pathname.startsWith('/translate')) {
+    // Per-key daily quota on free translate routes (/translate and /api/translate)
+    if (url.pathname.starts_with?.('/translate') || url.pathname.startsWith('/api/translate')) {
       const quotaResp = await enforceQuota(request, env);
       if (quotaResp) return quotaResp;
     }
@@ -172,36 +171,44 @@ export default {
       });
     }
 
-    // Free translate — supports GET ?q=... and POST {text|q}; rewrites to POST { text } before forwarding
+    // Free translate — unified GET/POST handler that normalizes payload and forwards to origin free path
     if (url.pathname === '/translate') {
-      if (request.method === 'OPTIONS') {
-        return cors();
-      }
+      if (request.method === 'OPTIONS') return cors(reqOrigin);
 
+      const method = request.method.toUpperCase();
       let phrase = '';
-      if (request.method === 'GET') {
-        phrase = url.searchParams.get('q') || '';
-        if (!phrase) return json({ ok: false, error: 'missing_query' }, 400);
-      } else if (request.method === 'POST') {
+
+      if (method === 'GET') {
+        phrase = url.searchParams.get('q') || url.searchParams.get('text') || '';
+      } else if (method === 'POST') {
         try {
           const raw = await request.text();
           const body = raw ? JSON.parse(raw) : {};
-          phrase = body.text || body.q || '';
-          if (!phrase) return json({ ok: false, error: 'invalid_json' }, 400);
+          phrase = body.q || body.text || '';
         } catch {
-          return json({ ok: false, error: 'invalid_json' }, 400);
+          return j(false, null, 'invalid_json', 400, {}, reqOrigin);
         }
       } else {
-        return json({ ok: false, error: 'method_not_allowed' }, 405);
+        return j(false, null, 'method_not_allowed', 405, { Allow: 'GET,POST,OPTIONS' }, reqOrigin);
       }
 
-      // Rewrite the incoming request into a POST with JSON body `{ text }` so downstream cache/forward path works unchanged
-      const newHeaders = new Headers(request.headers);
-      newHeaders.set('content-type', 'application/json');
+      phrase = (phrase || '').trim();
+      if (!phrase) {
+        return j(false, null, 'missing_query', 400, {}, reqOrigin);
+      }
+
+      // Rewrite to GET /api/translate?q=... so downstream cache + forward logic stays identical
+      const forwardHeaders = new Headers(request.headers);
+      forwardHeaders.delete('content-type');
       const accept = request.headers.get('accept');
-      if (accept) newHeaders.set('accept', accept);
-      const body = JSON.stringify({ text: phrase });
-      request = new Request(request.url, { method: 'POST', headers: newHeaders, body });
+      if (accept) forwardHeaders.set('accept', accept);
+
+      const translatedUrl = new URL(request.url);
+      translatedUrl.pathname = '/api/translate';
+      translatedUrl.search = '?q=' + encodeURIComponent(phrase);
+
+      request = new Request(translatedUrl.toString(), { method: 'GET', headers: forwardHeaders });
+      url = new URL(request.url);
       // fall through to generic caching + forward logic
     }
 
@@ -215,7 +222,8 @@ export default {
 
     // Caching decision
     const method = request.method.toUpperCase();
-    const cacheable = url.pathname.startsWith('/translate') && (method === 'GET' || method === 'POST');
+    const cacheable = ( (url.pathname.startsWith('/translate') || url.pathname.startsWith('/api/translate')) 
+      && (method === 'GET' || method === 'POST') );
     const bypass = url.searchParams.get('cache') === 'no';
 
     // KV cache lookup
