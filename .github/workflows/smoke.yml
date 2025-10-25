@@ -1,138 +1,41 @@
-name: Smoke
+name: smoke
 on:
-  workflow_dispatch:
-  pull_request:
   push:
-    branches: [ main ]
+  pull_request:
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
   smoke:
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Apex front door
-        continue-on-error: true
+      - name: Free GET via Edge /api/translate
         run: |
           set -euo pipefail
-          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-          hit() { curl -sS -A "$UA" -H 'accept: text/html' -o /dev/null -w '%{http_code}' "$1" || true; }
-          code=$(hit https://dhkalign.com/)
-          echo "apex / HTTP $code"
-          if [ "$code" != "200" ]; then
-            code=$(hit https://dhkalign.com/index.html)
-            echo "apex /index.html HTTP $code"
-          fi
+          URL="https://edge.dhkalign.com/api/translate"
+          PHRASE="Rickshaw pabo na"
+          OUT="$(curl -fsS -G "$URL" --data-urlencode "q=$PHRASE")"
+          echo "$OUT" | jq -e 'has("tgt_text") or has("translation") or has("data")' >/dev/null
 
-      - name: www redirects to apex
-        continue-on-error: true
+      - name: PRO via backend proxy (no secrets in CI)
         run: |
           set -euo pipefail
-          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-          code=$(curl -sSI -A "$UA" -o /dev/null -w '%{http_code}' "https://www.dhkalign.com/test?q=1")
-          echo "www redirect HTTP $code"
+          RES=$(curl -fsS -X POST https://backend.dhkalign.com/api/pro-translate \
+            -H 'content-type: application/json' \
+            -d '{"q":"Rickshaw pabo na"}')
+          echo "$RES" | jq -e 'type=="object"'
+          echo "$RES"
 
-      - name: Edge version (CI-safe, backend fallback)
+      - name: Pages serves JS, not HTML
         run: |
-          set -euo pipefail
-          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-          curl_edge()    { curl -sS --retry 2 --retry-all-errors -A "$UA" -H 'accept: application/json' -o edge.json    -w '%{http_code}' https://edge.dhkalign.com/version    || true; }
-          curl_backend() { curl -sS --retry 2 --retry-all-errors              -H 'accept: application/json' -o backend.json -w '%{http_code}' https://backend.dhkalign.com/version || true; }
-          has_sha_file() {
-            F="$1"
-            if jq -e . >/dev/null 2>&1 <"$F"; then
-              jq -e '( .sha? // .commit? // .version? // empty | tostring | test("^[0-9a-fA-F]{7,40}$") )
-                      or ( .. | scalars | tostring | test("^[0-9a-fA-F]{7,40}$") )' <"$F"
-            else
-              grep -Eq '[0-9a-fA-F]{7,40}' "$F" || { echo "No SHA-like string in $F"; exit 1; }
-            fi
-          }
-          CODE=$(curl_edge)
-          echo "--- edge /version ($CODE) ---"
-          jq . < edge.json || cat edge.json || true
-          if [ "$CODE" = "200" ]; then
-            has_sha_file edge.json
-          else
-            echo "Edge non-200 ($CODE) — fallback to backend /version"
-            CODE_B=$(curl_backend)
-            echo "--- backend /version ($CODE_B) ---"
-            jq . < backend.json || cat backend.json || true
-            [ "$CODE_B" = "200" ] || { echo "backend /version non-200: $CODE_B"; exit 1; }
-            has_sha_file backend.json
-          fi
-
-      - name: Backend health (tolerant)
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-          code=$(curl -sS -A "$UA" -H 'accept: application/json' -o body.json -w '%{http_code}' https://backend.dhkalign.com/health || true)
-          echo "--- backend.dhkalign.com/health ($code) ---"
-          jq . < body.json || cat body.json || true
-          if [ "$code" != "200" ]; then
-            code2=$(curl -sS -H 'accept: application/json' -o body2.json -w '%{http_code}' https://dhkalign-backend.fly.dev/health || true)
-            echo "--- fly.dev/health ($code2) ---"
-            jq . < body2.json || cat body2.json || true
-          fi
-      - name: Derive Go app host
-        id: gohost
-        run: |
-          set -euo pipefail
-          if [ -f backend-go/fly.toml ]; then
-            APP=$(awk -F\" '/^app = / {print $2}' backend-go/fly.toml || true)
-            if [ -n "$APP" ]; then
-              echo "HOST=${APP}.fly.dev" >> "$GITHUB_OUTPUT"
-            fi
-          fi
-
-      - name: Go sidecar health (non-blocking)
-        continue-on-error: true
-        env:
-          GO_HOST: ${{ steps.gohost.outputs.HOST }}
-        run: |
-          set -euo pipefail
-          code=$(curl -sS -o go.json -w '%{http_code}' "https://${GO_HOST:-dhkalign-backend-go-sartu-1760913318.fly.dev}/go/health" || true)
-          echo "go sidecar /health $code"
-          jq . < go.json || cat go.json || true
-
-      - name: Free translate (tolerant)
-        run: |
-          set -euo pipefail
-          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-          call() { curl -sS -A "$UA" --get -H 'accept: application/json' -o ft.json -w '%{http_code}' "$1" --data-urlencode "q=Rickshaw pabo na" || true; }
-          code=$(call https://edge.dhkalign.com/api/translate)
-          if [ "$code" != "200" ]; then
-            code=$(call https://edge.dhkalign.com/translate)
-          fi
-          echo "free translate HTTP $code"
-          jq . < ft.json || cat ft.json || true
-          if [ "$code" = "200" ]; then
-            jq -e 'has("translation") or has("output") or has("result") or has("data")' < ft.json
-          else
-            echo "free translate non-200; not failing smoke"
-          fi
-
-      - name: Free translate (second try)
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-          call() { curl -sS -A "$UA" --get -H 'accept: application/json' -o ft2.json -w '%{http_code}' "$1" --data-urlencode "q=Rickshaw pabo na" || true; }
-          code=$(call https://edge.dhkalign.com/api/translate)
-          if [ "$code" != "200" ]; then
-            code=$(call https://edge.dhkalign.com/translate)
-          fi
-          echo "free translate #2 HTTP $code"
-          jq . < ft2.json || cat ft2.json || true
+            set -euo pipefail
+            UA="Mozilla/5.0"
+            ASSET=$(curl -s -A "$UA" https://dhkalign.com/ | grep -oE '/assets/[^"]+\\.js' | head -n1 || true)
+            echo "asset=$ASSET"
+            [ -n "$ASSET" ] || (echo "no asset found in HTML" && exit 1)
+            CT=$(curl -sSI -A "$UA" "https://dhkalign.com$${ASSET}" | tr -d '\r' | awk 'tolower($1$2)=="content-type:"{print tolower($2)}')
+            echo "ct=$CT"
+            echo "$CT" | grep -q 'javascript' || (echo "asset served not as JS" && exit 1)
