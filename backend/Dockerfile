@@ -22,3 +22,6 @@ EXPOSE 8080
 
 # Start FastAPI with uvicorn
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+
+# Ensure data dir exists for mounted volume
+RUN mkdir -p /app/backend/data
