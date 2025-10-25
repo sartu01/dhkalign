@@ -1,5 +1,3 @@
-
-
 import os
 import secrets
 import json
@@ -16,6 +14,11 @@ router = APIRouter(prefix="/api/keys", tags=["keys"])
 # Basic file-backed key store (replace with DB later)
 STORE_PATH = pathlib.Path(os.getenv("KEY_STORE_PATH", "/data/keys.json"))
 SALT = (os.getenv("API_KEY_SALT") or "dev-salt").encode()
+
+# Hashing settings (versioned)
+ALG_ID = "pbkdf2_sha256_v1"
+PBKDF_ITERATIONS = int(os.getenv("API_KEY_PBKDF_ITERS", "200000"))
+
 STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 def _load_store() -> dict:
@@ -31,7 +34,13 @@ def _save_store(d: dict) -> None:
     STORE_PATH.write_text(json.dumps(d))
 
 def _hash(api_key: str) -> str:
-    return hashlib.blake2b(api_key.encode(), key=SALT, digest_size=32).hexdigest()
+    return hashlib.pbkdf2_hmac(
+        "sha256",
+        api_key.encode("utf-8"),
+        SALT,
+        PBKDF_ITERATIONS,
+        dklen=32,
+    ).hex()
 
 # --- Models -----------------------------------------------------------------
 class CreateKeyIn(BaseModel):
@@ -52,6 +61,7 @@ async def create_key(body: CreateKeyIn):
     record = {
         "id": secrets.token_hex(8),
         "hash": _hash(raw),
+        "algo": ALG_ID,
         "note": body.note or "",
         "created_at": int(time.time()),
         "expires_at": int(time.time()) + body.ttl_seconds if body.ttl_seconds else None,
@@ -81,13 +91,18 @@ async def rotate_key(body: RotateKeyIn):
 
 @router.post("/verify")
 async def verify_key(body: VerifyKeyIn):
-    h = _hash(body.key)
     store = _load_store()
     now = int(time.time())
     for rec in store.get("keys", []):
+        algo = rec.get("algo", "blake2b_legacy")
+        if algo == "pbkdf2_sha256_v1":
+            expected = _hash(body.key)
+        else:
+            # legacy blake2b fallback for old records
+            expected = hashlib.blake2b(body.key.encode(), key=SALT, digest_size=32).hexdigest()
         if (
             not rec.get("revoked")
-            and rec.get("hash") == h
+            and rec.get("hash") == expected
             and (rec.get("expires_at") is None or rec["expires_at"] > now)
         ):
             return {"valid": True, "id": rec["id"], "note": rec.get("note")}
