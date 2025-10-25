@@ -5,7 +5,10 @@ WRAITH Edition with structured logging, performance monitoring, and security fea
 """
 
 import sqlite3
-import pandas as pd
+try:
+    import pandas as pd
+except Exception:
+    pd = None  # pandas optional; not needed to serve API
 import uvicorn
 import os
 import time
