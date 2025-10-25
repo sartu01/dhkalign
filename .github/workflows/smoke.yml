@@ -11,31 +11,65 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    timeout-minutes: 5
     steps:
-      - name: Free GET via Edge /api/translate
+      - name: Install jq
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+
+      - name: Free GET via Edge /api/translate (expect JSON)
+        shell: bash
         run: |
           set -euo pipefail
           URL="https://edge.dhkalign.com/api/translate"
           PHRASE="Rickshaw pabo na"
-          OUT="$(curl -fsS -G "$URL" --data-urlencode "q=$PHRASE")"
-          echo "$OUT" | jq -e 'has("tgt_text") or has("translation") or has("data")' >/dev/null
+          echo "::group::GET $URL?q=$PHRASE"
+          http_code=$(curl -sS -m 20 --retry 2 --retry-delay 1 \
+            -w "%{http_code}" -o resp_free.json \
+            -H 'accept: application/json' \
+            -G "$URL" --data-urlencode "q=$PHRASE")
+          echo "HTTP=$http_code"
+          cat resp_free.json || true
+          echo "::endgroup::"
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 400 ]; then
+            echo "::error::Free translate returned HTTP $http_code"; exit 1; fi
+          jq -e 'type=="object" and (has("tgt_text") or has("translation") or has("data"))' resp_free.json >/dev/null
 
-      - name: PRO via backend proxy (no secrets in CI)
+      - name: PRO via backend proxy /api/pro-translate (no secrets)
+        shell: bash
         run: |
           set -euo pipefail
-          RES=$(curl -fsS -X POST https://backend.dhkalign.com/api/pro-translate \
-            -H 'content-type: application/json' \
-            -d '{"q":"Rickshaw pabo na"}')
-          echo "$RES" | jq -e 'type=="object"'
-          echo "$RES"
+          URL="https://backend.dhkalign.com/api/pro-translate"
+          BODY='{"q":"Rickshaw pabo na"}'
+          echo "::group::POST $URL"
+          http_code=$(curl -sS -m 20 --retry 2 --retry-delay 1 \
+            -w "%{http_code}" -o resp_pro.json \
+            -H 'content-type: application/json' -H 'accept: application/json' \
+            -d "$BODY" "$URL")
+          echo "HTTP=$http_code"
+          cat resp_pro.json || true
+          echo "::endgroup::"
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 400 ]; then
+            echo "::error::PRO proxy returned HTTP $http_code"; exit 1; fi
+          jq -e 'type=="object"' resp_pro.json >/dev/null
 
-      - name: Pages serves JS, not HTML
+      - name: Pages serves JS (not HTML)
+        shell: bash
         run: |
-            set -euo pipefail
-            UA="Mozilla/5.0"
-            ASSET=$(curl -s -A "$UA" https://dhkalign.com/ | grep -oE '/assets/[^"]+\\.js' | head -n1 || true)
-            echo "asset=$ASSET"
-            [ -n "$ASSET" ] || (echo "no asset found in HTML" && exit 1)
-            CT=$(curl -sSI -A "$UA" "https://dhkalign.com$${ASSET}" | tr -d '\r' | awk 'tolower($1$2)=="content-type:"{print tolower($2)}')
-            echo "ct=$CT"
-            echo "$CT" | grep -q 'javascript' || (echo "asset served not as JS" && exit 1)
+          set -euo pipefail
+          UA="Mozilla/5.0"
+          html=$(mktemp)
+          curl -sS -A "$UA" https://dhkalign.com/ -o "$html"
+          ASSET=$(grep -oE '/assets/[^"]+\.js' "$html" | head -n1 || true)
+          echo "asset=$ASSET"
+          if [ -z "$ASSET" ]; then
+            echo "::error::No JS asset hyperlink found in index.html"; exit 1; fi
+          ct=$(curl -sSI -A "$UA" "https://dhkalign.com${ASSET}" | tr -d '\r' | awk 'tolower($1$2)=="content-type:"{print tolower($2)}')
+          echo "content-type=$ct"
+          case "$ct" in
+            application/javascript*|text/javascript*) : ;;
+            *) echo "::error::Asset served with wrong content-type: $ct"; exit 1 ;;
+          esac
