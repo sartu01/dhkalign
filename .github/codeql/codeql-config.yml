@@ -1,6 +1,9 @@
-name: dhkalign-codeql-config
+name: dhkalign-codeql
 queries:
   - uses: security-extended
 paths:
-  - frontend
   - backend
+  - frontend
+paths-ignore:
+  - '**/node_modules/**'
+  - '**/*.bak.*'
