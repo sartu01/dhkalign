@@ -94,12 +94,11 @@ async def verify_key(body: VerifyKeyIn):
     store = _load_store()
     now = int(time.time())
     for rec in store.get("keys", []):
-        algo = rec.get("algo", "blake2b_legacy")
-        if algo == "pbkdf2_sha256_v1":
-            expected = _hash(body.key)
-        else:
-            # legacy blake2b fallback for old records
-            expected = hashlib.blake2b(body.key.encode(), key=SALT, digest_size=32).hexdigest()
+        algo = rec.get("algo", ALG_ID)
+        # Only accept current algorithm; legacy records require migration
+        if algo != ALG_ID:
+            continue
+        expected = _hash(body.key)
         if (
             not rec.get("revoked")
             and rec.get("hash") == expected
