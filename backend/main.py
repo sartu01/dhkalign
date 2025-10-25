@@ -757,3 +757,7 @@ try:
 except Exception:
     pass
 # --- END WRAITH ADMIN CACHE ROUTER ---
+from backend.routes.billing import router as billing_router
+app.include_router(billing_router)
+from backend.routes.proxy import router as proxy_router
+app.include_router(proxy_router)
