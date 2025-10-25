@@ -1,9 +1,19 @@
 name: dhkalign-codeql
+
 queries:
   - uses: security-extended
+
 paths:
   - backend
+  - backend-go
   - frontend
+
 paths-ignore:
   - '**/node_modules/**'
-  - '**/*.bak.*'
+  - '**/dist/**'
+  - '**/build/**'
+  - '**/.venv/**'
+  - '**/venv/**'
+  - '**/__pycache__/**'
+  - '**/*.min.js'
+  - 'backend/private/**'

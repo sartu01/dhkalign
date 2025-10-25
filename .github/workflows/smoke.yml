@@ -27,7 +27,7 @@ jobs:
           URL="https://edge.dhkalign.com/api/translate"
           PHRASE="Rickshaw pabo na"
           echo "::group::GET $URL?q=$PHRASE"
-          http_code=$(curl -sS -m 20 --retry 2 --retry-delay 1 \
+          http_code=$(curl -sS -m 20 --retry 2 --retry-delay 1 --retry-all-errors -L \
             -w "%{http_code}" -o resp_free.json \
             -H 'accept: application/json' \
             -G "$URL" --data-urlencode "q=$PHRASE")
@@ -45,7 +45,7 @@ jobs:
           URL="https://backend.dhkalign.com/api/pro-translate"
           BODY='{"q":"Rickshaw pabo na"}'
           echo "::group::POST $URL"
-          http_code=$(curl -sS -m 20 --retry 2 --retry-delay 1 \
+          http_code=$(curl -sS -m 20 --retry 2 --retry-delay 1 --retry-all-errors -L \
             -w "%{http_code}" -o resp_pro.json \
             -H 'content-type: application/json' -H 'accept: application/json' \
             -d "$BODY" "$URL")
@@ -68,6 +68,11 @@ jobs:
           if [ -z "$ASSET" ]; then
             echo "::error::No JS asset hyperlink found in index.html"; exit 1; fi
           ct=$(curl -sSI -A "$UA" "https://dhkalign.com${ASSET}" | tr -d '\r' | awk 'tolower($1$2)=="content-type:"{print tolower($2)}')
+          status=$(curl -sS -I -m 15 --retry 2 --retry-delay 1 --retry-all-errors -L -A "$UA" "https://dhkalign.com${ASSET}" \
+            | tr -d '\r' | awk 'NR==1{print $2}')
+          echo "status=$status"
+          if [ -z "$status" ] || [ "$status" -lt 200 ] || [ "$status" -ge 400 ]; then
+            echo "::error::Asset HEAD returned HTTP $status"; exit 1; fi
           echo "content-type=$ct"
           case "$ct" in
             application/javascript*|text/javascript*) : ;;
