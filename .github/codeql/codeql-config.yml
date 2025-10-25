@@ -1,0 +1,6 @@
+name: dhkalign-codeql-config
+queries:
+  - uses: security-extended
+paths:
+  - frontend
+  - backend
