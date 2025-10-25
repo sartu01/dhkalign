@@ -15,9 +15,6 @@ primary_region = "iad"
   min_machines_running = 1
   processes = ["app"]
 
-  source = "dhkalign_data"
-  destination = "/data"
-
 [mounts]
   source = "dhkalign_data"
   destination = "/data"

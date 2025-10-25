@@ -39,7 +39,7 @@ from backend.utils.logger import (
 from backend.translator import set_db_lookup_function, router as translator_router
 
 # Configuration constants
-DB_PATH = "data/translations.db"
+DB_PATH = os.getenv("DB_PATH", "/data/translations.db")
 CSV_PATH = "data/combined_dataset_final_sequential.csv"
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "dev-admin-key-change-in-production")
 
@@ -386,11 +386,24 @@ app.add_middleware(
     allow_origins=["https://dhkalign.com", "https://www.dhkalign.com"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["content-type", "x-api-key", "x-admin-key", "stripe-signature"],
+    allow_headers=["content-type", "x-api-key", "x-admin-key", "stripe-signature", "x-turnstile"],
 )
+
 
 # Include the enhanced translator router
 app.include_router(translator_router, prefix="/api")
+
+# Optional auth and API key management routers (guarded import)
+try:
+    from backend.routes.auth_magic import router as auth_router
+    app.include_router(auth_router)
+except Exception:
+    pass
+try:
+    from backend.routes.api_keys import router as keys_router
+    app.include_router(keys_router)
+except Exception:
+    pass
 
 
 # ----------------------------------------------------------------------------

@@ -1,11 +1,10 @@
-
-
 import os
-import json
+from uuid import uuid4
 from typing import Optional, Dict
 from fastapi import APIRouter, HTTPException, Request, Header
 from pydantic import BaseModel, Field
 import httpx
+from backend.utils import logger
 
 # Stripe is optional import; only required when price ids are configured
 try:
@@ -14,6 +13,9 @@ except Exception:  # pragma: no cover
     stripe = None
 
 router = APIRouter()
+
+# Allowed packs and basic pricing map sanity
+ALLOWED_PACKS = {"slang", "dialects", "pro_bundle"}  # 'everyday' is intentionally free
 
 # ----- Config / Env -----
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
@@ -40,6 +42,7 @@ class CheckoutBody(BaseModel):
     pack: str = Field(..., description="Which pack to buy: slang | dialects | pro_bundle (everyday is free)")
     success_url: str
     cancel_url: str
+    email: Optional[str] = Field(default=None, description="Optional customer email to prefill checkout")
 
 
 # ----- Helpers -----
@@ -80,25 +83,46 @@ async def create_checkout_session(
         raise HTTPException(status_code=401, detail="turnstile_failed")
 
     pack = body.pack.strip().lower()
+    logger.info(f"billing.create_checkout_session pack={pack}")
     if pack == "everyday":
         raise HTTPException(status_code=400, detail="everyday_is_free")
+    if pack not in ALLOWED_PACKS:
+        raise HTTPException(status_code=400, detail="unknown_pack")
 
     price_id = PACK_PRICES.get(pack, "")
     if not STRIPE_SECRET_KEY or not stripe or not price_id:
         raise HTTPException(status_code=500, detail="billing_not_configured")
 
     try:
-        session = stripe.checkout.Session.create(
+        # Stripe idempotency key protects against double-submits
+        idk = f"checkout-{pack}-{uuid4().hex}"
+        checkout_kwargs = dict(
             mode="payment",
             payment_method_types=["card"],  # Apple Pay shows automatically when eligible
             line_items=[{"price": price_id, "quantity": 1}],
             success_url=body.success_url + "?session_id={CHECKOUT_SESSION_ID}",
             cancel_url=body.cancel_url,
             allow_promotion_codes=True,
+            metadata={"pack": pack},
         )
+        if body.email:
+            checkout_kwargs["customer_email"] = body.email
+        session = stripe.checkout.Session.create(
+            **checkout_kwargs,
+            idempotency_key=idk,
+        )
+        logger.info(f"billing.checkout.created pack={pack} session={session.id}")
         return {"url": session.url}
     except Exception as e:  # pragma: no cover
-        raise HTTPException(status_code=500, detail=str(e))
+        try:
+            import stripe as _s
+            if isinstance(e, getattr(_s.error, "StripeError", Exception)):
+                logger.warning(f"stripe_error pack={pack}: {e}")
+                raise HTTPException(status_code=502, detail=str(e))
+        except Exception:
+            pass
+        logger.exception("billing.checkout.exception")
+        raise HTTPException(status_code=500, detail="billing_error")
 
 
 @router.post("/api/billing/create-btcpay-invoice")
@@ -127,6 +151,7 @@ async def stripe_webhook(request: Request):
     payload = await request.body()
     if not STRIPE_WEBHOOK_SECRET:
         # Accept but do nothing; you can restrict by IP if you want later.
+        logger.info("billing.webhook.received")
         return {"ok": True}
 
     sig = request.headers.get("stripe-signature")
@@ -145,4 +170,5 @@ async def stripe_webhook(request: Request):
         # pack metadata could be added later
         pass
 
+    logger.info("billing.webhook.received")
     return {"ok": True}
