@@ -1,82 +1,35 @@
 name: CodeQL
-
 on:
+  pull_request:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
   schedule:
-    - cron: '30 1 * * 0'
+    - cron: '33 0 * * 0'
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   analyze:
-    name: CodeQL / Analyze (${{ matrix.language }})
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'javascript-typescript', 'python', 'go' ]
-
+        language: [ 'javascript', 'python', 'go' ]  # JS covers TS as well
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      # Toolchains for monorepo builds
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-
-      # Initialize CodeQL
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
+          # Optional custom config:
+          # config-file: ./.github/codeql/codeql-config.yml
 
-      # Try GitHub autobuild first
       - name: Autobuild
         uses: github/codeql-action/autobuild@v3
 
-      # Manual builds for monorepo (best-effort, never fail pipeline)
-      - name: Manual builds (monorepo best-effort)
-        run: |
-          set -ex
-          if [ -d frontend ]; then
-            cd frontend
-            if [ -f package-lock.json ]; then npm ci || npm i; else npm i; fi
-            npm run build || true
-            cd -
-          fi
-          if [ -d backend-go ]; then
-            cd backend-go
-            go mod tidy
-            go build ./... || true
-            cd -
-          fi
-          if [ -d backend ] && [ -f backend/requirements.txt ]; then
-            python -m pip install -r backend/requirements.txt || true
-          fi
-
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
-        with:
-          category: '/language:${{ matrix.language }}'
