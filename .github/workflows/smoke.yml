@@ -20,11 +20,11 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y jq
 
-      - name: Free GET via Edge /api/translate (expect JSON)
+      - name: Free GET via backend /translate (expect JSON)
         shell: bash
         run: |
           set -euo pipefail
-          URL="https://edge.dhkalign.com/api/translate"
+          URL="https://backend.dhkalign.com/translate"
           PHRASE="Rickshaw pabo na"
           echo "::group::GET $URL?q=$PHRASE"
           http_code=$(curl -sS -m 20 --retry 2 --retry-delay 1 --retry-all-errors -L \
@@ -37,6 +37,19 @@ jobs:
           if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 400 ]; then
             echo "::error::Free translate returned HTTP $http_code"; exit 1; fi
           jq -e 'type=="object" and (has("tgt_text") or has("translation") or has("data"))' resp_free.json >/dev/null
+
+      - name: Edge health check
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://edge.dhkalign.com/edge/health"
+          echo "::group::GET $URL"
+          http_code=$(curl -sS -m 15 --retry 2 --retry-delay 1 --retry-all-errors -L \
+            -w "%{http_code}" -o /dev/null "$URL")
+          echo "HTTP=$http_code"
+          echo "::endgroup::"
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 400 ]; then
+            echo "::error::Edge health returned HTTP $http_code"; exit 1; fi
 
       - name: PRO via backend proxy /api/pro-translate (no secrets)
         shell: bash
