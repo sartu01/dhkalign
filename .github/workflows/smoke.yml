@@ -20,14 +20,14 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y jq
 
-      - name: Free GET via backend /translate (expect JSON)
+      - name: Free GET via Backend /api/translate (expect JSON)
         shell: bash
         run: |
           set -euo pipefail
-          URL="https://backend.dhkalign.com/translate"
+          URL="https://backend.dhkalign.com/api/translate"
           PHRASE="Rickshaw pabo na"
           echo "::group::GET $URL?q=$PHRASE"
-          http_code=$(curl -sS -m 20 --retry 2 --retry-delay 1 --retry-all-errors -L \
+          http_code=$(curl -sS -m 20 --connect-timeout 5 --retry 2 --retry-delay 1 --retry-all-errors -L \
             -w "%{http_code}" -o resp_free.json \
             -H 'accept: application/json' \
             -G "$URL" --data-urlencode "q=$PHRASE")
