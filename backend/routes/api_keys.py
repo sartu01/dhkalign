@@ -4,6 +4,7 @@ import json
 import hashlib
 import time
 import pathlib
+from hmac import compare_digest
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -31,7 +32,24 @@ def _load_store() -> dict:
         return {"keys": []}
 
 def _save_store(d: dict) -> None:
-    STORE_PATH.write_text(json.dumps(d))
+    # Atomic write: write to temp file then replace
+    tmp = STORE_PATH.with_suffix(".tmp")
+    try:
+        tmp.parent.mkdir(parents=True, exist_ok=True)
+        with open(tmp, "w") as f:
+            json.dump(d, f)
+        # best-effort restrictive perms for the store file
+        try:
+            os.chmod(tmp, 0o600)
+        except Exception:
+            pass
+        os.replace(tmp, STORE_PATH)
+    finally:
+        try:
+            if tmp.exists():
+                tmp.unlink(missing_ok=True)  # type: ignore[arg-type]
+        except Exception:
+            pass
 
 def _hash(api_key: str) -> str:
     return hashlib.pbkdf2_hmac(
@@ -101,7 +119,7 @@ async def verify_key(body: VerifyKeyIn):
         expected = _hash(body.key)
         if (
             not rec.get("revoked")
-            and rec.get("hash") == expected
+            and compare_digest(rec.get("hash", ""), expected)
             and (rec.get("expires_at") is None or rec["expires_at"] > now)
         ):
             return {"valid": True, "id": rec["id"], "note": rec.get("note")}
