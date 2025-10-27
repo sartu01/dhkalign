@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/home/appuser/.local/bin:$PATH" \
     PORT=8080 \
     WEB_CONCURRENCY=2 \
-    PYTHONPATH="/app"
+    PYTHONPATH="/app:/app/backend"
 
 # System deps kept minimal; add build deps only if needed
 RUN apt-get update \
@@ -37,4 +37,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD sh -c "curl -fsS http://127.0.0.1:${PORT:-8080}/health || exit 1"
 
 # Start FastAPI (respect PORT/WEB_CONCURRENCY); enable proxy headers behind Fly
-CMD ["sh", "-lc", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080} --workers ${WEB_CONCURRENCY:-2} --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["sh", "-lc", "exec uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers ${WEB_CONCURRENCY:-2} --proxy-headers --forwarded-allow-ips=*"]
