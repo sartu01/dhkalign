@@ -22,10 +22,40 @@ __all__ = (
 class AppLogger(logging.Logger):
     """Custom logger that adds helpers for structured database logging."""
 
+    def _merge_extra(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        extra = kwargs.pop("extra", {}) or {}
+        if not isinstance(extra, dict):
+            extra = dict(extra)
+        extra.update(kwargs)
+        kwargs.clear()
+        return extra
+
+    def log(self, level: int, msg: str, *args: Any, **kwargs: Any) -> None:
+        extra = self._merge_extra(kwargs)
+        super().log(level, msg, *args, extra=extra, **kwargs)
+
+    def debug(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        extra = self._merge_extra(kwargs)
+        super()._log(logging.DEBUG, msg, args, extra=extra, **kwargs)
+
+    def info(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        extra = self._merge_extra(kwargs)
+        super()._log(logging.INFO, msg, args, extra=extra, **kwargs)
+
+    def warning(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        extra = self._merge_extra(kwargs)
+        super()._log(logging.WARNING, msg, args, extra=extra, **kwargs)
+
+    def error(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        extra = self._merge_extra(kwargs)
+        super()._log(logging.ERROR, msg, args, extra=extra, **kwargs)
+
+    def critical(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        extra = self._merge_extra(kwargs)
+        super()._log(logging.CRITICAL, msg, args, extra=extra, **kwargs)
+
     def database_operation(self, op: str, success: bool, **kw: Any) -> None:
-        payload = {"op": op, "success": bool(success)}
-        payload.update(kw)
-        self.info("db_op", extra=payload)
+        self.info("db_op", op=op, success=bool(success), **kw)
 
 
 if logging.getLoggerClass() is not AppLogger:
