@@ -6,6 +6,7 @@ import time
 import pathlib
 from hmac import compare_digest
 from typing import Optional
+from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from backend.utils import logger
@@ -21,6 +22,9 @@ ALG_ID = "pbkdf2_sha256_v1"
 PBKDF_ITERATIONS = int(os.getenv("API_KEY_PBKDF_ITERS", "200000"))
 
 STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+def _now() -> int:
+    return int(time.time())
 
 def _load_store() -> dict:
     if not STORE_PATH.exists():
@@ -69,6 +73,9 @@ class RotateKeyIn(BaseModel):
     id: str
     note: Optional[str] = None
 
+class RevokeKeyIn(BaseModel):
+    id: str
+
 class VerifyKeyIn(BaseModel):
     key: str
 
@@ -76,13 +83,15 @@ class VerifyKeyIn(BaseModel):
 @router.post("/create")
 async def create_key(body: CreateKeyIn):
     raw = secrets.token_urlsafe(32)
+    ttl = 0 if body.ttl_seconds is None else max(0, int(body.ttl_seconds))
+    now_ts = _now()
     record = {
         "id": secrets.token_hex(8),
         "hash": _hash(raw),
         "algo": ALG_ID,
         "note": body.note or "",
-        "created_at": int(time.time()),
-        "expires_at": int(time.time()) + body.ttl_seconds if body.ttl_seconds else None,
+        "created_at": now_ts,
+        "expires_at": now_ts + ttl if ttl else None,
         "revoked": False,
     }
     store = _load_store()
@@ -99,7 +108,7 @@ async def rotate_key(body: RotateKeyIn):
         if rec["id"] == body.id and not rec.get("revoked"):
             new_raw = secrets.token_urlsafe(32)
             rec["hash"] = _hash(new_raw)
-            rec["rotated_at"] = int(time.time())
+            rec["rotated_at"] = _now()
             if body.note is not None:
                 rec["note"] = body.note
             _save_store(store)
@@ -107,10 +116,37 @@ async def rotate_key(body: RotateKeyIn):
             return {"id": body.id, "key": new_raw}
     raise HTTPException(status_code=404, detail="not_found")
 
+@router.get("/list", response_model=List[dict])
+async def list_keys():
+    store = _load_store()
+    out = []
+    for rec in store.get("keys", []):
+        out.append({
+            "id": rec.get("id"),
+            "note": rec.get("note"),
+            "created_at": rec.get("created_at"),
+            "expires_at": rec.get("expires_at"),
+            "revoked": rec.get("revoked", False),
+            "rotated_at": rec.get("rotated_at"),
+        })
+    return out
+
+@router.post("/revoke")
+async def revoke_key(body: RevokeKeyIn):
+    store = _load_store()
+    for rec in store.get("keys", []):
+        if rec.get("id") == body.id and not rec.get("revoked"):
+            rec["revoked"] = True
+            rec["revoked_at"] = _now()
+            _save_store(store)
+            logger.info("api_key.revoked id=%s", body.id)
+            return {"ok": True}
+    raise HTTPException(status_code=404, detail="not_found")
+
 @router.post("/verify")
 async def verify_key(body: VerifyKeyIn):
     store = _load_store()
-    now = int(time.time())
+    now = _now()
     for rec in store.get("keys", []):
         algo = rec.get("algo", ALG_ID)
         # Only accept current algorithm; legacy records require migration
