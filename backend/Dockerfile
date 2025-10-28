@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/home/appuser/.local/bin:$PATH" \
     PORT=8080 \
     WEB_CONCURRENCY=2 \
-    PYTHONPATH="/app:/app/backend"
+    PYTHONPATH="/app"
 
 # System deps kept minimal; add build deps only if needed
 RUN apt-get update \

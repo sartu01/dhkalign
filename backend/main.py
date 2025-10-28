@@ -26,9 +26,9 @@ from slowapi.errors import RateLimitExceeded
 
 # Import enhanced logging system (guarded: provide no-op fallbacks if symbols are absent)
 try:
-    from backend.utils.logger import logger  # core logger
+    from utils.logger import logger  # core logger
     # Optional helpers; not guaranteed to exist
-    from backend.utils.logger import (  # type: ignore
+    from utils.logger import (  # type: ignore
         log_startup, log_shutdown, log_execution_time, log_api_request, log_health_check, LogAnalyzer  # noqa: F401
     )
 except Exception:
@@ -430,12 +430,12 @@ app.include_router(translator_router, prefix="/api")
 
 # Optional auth and API key management routers (guarded import)
 try:
-    from backend.routes.auth_magic import router as auth_router
+    from routes.auth_magic import router as auth_router
     app.include_router(auth_router)
 except Exception:
     pass
 try:
-    from backend.routes.api_keys import router as keys_router
+    from routes.api_keys import router as keys_router
     app.include_router(keys_router)
 except Exception:
     pass
@@ -768,7 +768,7 @@ if __name__ == "__main__":
 
 # --- removed old cache block ---
 try:
-    from backend.middleware_cache import TTLResponseCacheMiddleware, backend_cache_stats  # type: ignore
+    from middleware_cache import TTLResponseCacheMiddleware, backend_cache_stats  # type: ignore
     _mw_cache = TTLResponseCacheMiddleware(app)
     app.add_middleware(TTLResponseCacheMiddleware)
     # patch admin health if present to include cache counters
@@ -789,7 +789,7 @@ except Exception as _e:
 
 # --- WRAITH BACKEND TTL CACHE (fixed) ---
 try:
-    from backend.middleware_cache import TTLResponseCacheMiddleware, backend_cache_stats  # type: ignore
+    from middleware_cache import TTLResponseCacheMiddleware, backend_cache_stats  # type: ignore
     _mw_cache = TTLResponseCacheMiddleware
     app.add_middleware(TTLResponseCacheMiddleware)
     @app.get("/admin/cache_stats")
@@ -803,12 +803,12 @@ except Exception as _e:
 
 # --- WRAITH ADMIN CACHE ROUTER (append) ---
 try:
-    from backend.admin_cache_stats import router as _admin_cache_router
+    from admin_cache_stats import router as _admin_cache_router
     app.include_router(_admin_cache_router)
 except Exception:
     pass
 # --- END WRAITH ADMIN CACHE ROUTER ---
-from backend.routes.billing import router as billing_router
+from routes.billing import router as billing_router
 app.include_router(billing_router)
-from backend.routes.proxy import router as proxy_router
+from routes.proxy import router as proxy_router
 app.include_router(proxy_router)
