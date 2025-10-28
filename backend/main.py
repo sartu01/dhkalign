@@ -71,7 +71,7 @@ except Exception:
             return {"errors": 0, "by_type": {}}
 
 # Import the enhanced translator
-from backend.translator import set_db_lookup_function, router as translator_router
+from translator import set_db_lookup_function, router as translator_router
 
 # Configuration constants
 DB_PATH = os.getenv("DB_PATH", "/data/translations.db")
