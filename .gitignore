@@ -121,3 +121,4 @@ backend-go/backend-go
 backend-go/bin/
 backend-go/*.exe
 backend-go/*.out
+_archive/
