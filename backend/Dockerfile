@@ -37,4 +37,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD sh -c "curl -fsS http://127.0.0.1:${PORT:-8080}/health || exit 1"
 
 # Start FastAPI (respect PORT/WEB_CONCURRENCY); enable proxy headers behind Fly
-CMD ["uvicorn","main:app","--host","0.0.0.0","--port","${PORT:-8080}","--workers","1","--proxy-headers","--forwarded-allow-ips=*","--log-level","debug"]
+CMD ["uvicorn","main:app","--host","0.0.0.0","--port","8080","--workers","1","--proxy-headers","--forwarded-allow-ips=*","--log-level","debug"]
