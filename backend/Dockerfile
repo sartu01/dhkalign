@@ -26,8 +26,8 @@ RUN pip install --upgrade pip && \
 # Copy application code
 COPY . /app
 
-# Create non-root user and data dir; ensure write perms for /data (Fly volume)
-RUN useradd -ms /bin/bash appuser && mkdir -p /data && chown -R appuser:appuser /app /data
+# Create non-root user with stable UID/GID and data dir; ensure write perms for /data (Fly volume)
+RUN useradd -u 1000 -ms /bin/bash appuser && mkdir -p /data && chown -R appuser:appuser /app /data
 USER appuser
 
 EXPOSE 8080

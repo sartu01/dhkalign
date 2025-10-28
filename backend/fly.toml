@@ -32,3 +32,5 @@ primary_region = "iad"
 [mounts]
   source = "dhkalign_data"
   destination = "/data"
+  uid = 1000
+  gid = 1000
