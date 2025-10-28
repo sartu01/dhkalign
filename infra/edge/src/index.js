@@ -86,7 +86,7 @@ export default {
     }
 
     // Per-key daily quota on free translate routes (/translate and /api/translate)
-    if (url.pathname.starts_with?.('/translate') || url.pathname.startsWith('/api/translate')) {
+    if (url.pathname.startsWith('/translate') || url.pathname.startsWith('/api/translate')) {
       const quotaResp = await enforceQuota(request, env);
       if (quotaResp) return quotaResp;
     }
@@ -304,7 +304,7 @@ function addCors(h, origin = '') {
   }
   h.set('Vary', 'Origin');
   h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  h.set('Access-Control-Allow-Headers', 'Content-Type, x-api-key, x-admin-key, stripe-signature');
+  h.set('Access-Control-Allow-Headers', 'Content-Type, x-api-key, x-admin-key, stripe-signature, x-turnstile');
 }
 function json(obj, status = 200, origin = '') { const h = new Headers({ 'content-type': 'application/json' }); addCors(h, origin); addSecurityHeaders(h); return new Response(JSON.stringify(obj), { status, headers: h }); }
 async function safeJson(r) { try { return await r.json(); } catch { return { raw: await r.text() }; } }

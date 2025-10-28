@@ -20,9 +20,6 @@ primary_region = "iad"
   soft_limit = 25
   hard_limit = 50
 
-  source = "dhkalign_data"
-  destination = "/data"
-
 [checks]
   [checks.http]
     port = 8080
@@ -31,9 +28,7 @@ primary_region = "iad"
     interval = "15s"
     timeout = "2s"
     grace_period = "10s"
-  source = "dhkalign_data"
-  destination = "/data"
+
 [mounts]
   source = "dhkalign_data"
   destination = "/data"
-

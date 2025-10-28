@@ -24,16 +24,51 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-# Import enhanced logging system
-from backend.utils.logger import (
-    logger, 
-    log_startup, 
-    log_shutdown, 
-    log_execution_time, 
-    log_api_request,
-    log_health_check,
-    LogAnalyzer
-)
+# Import enhanced logging system (guarded: provide no-op fallbacks if symbols are absent)
+try:
+    from backend.utils.logger import logger  # core logger
+    # Optional helpers; not guaranteed to exist
+    from backend.utils.logger import (  # type: ignore
+        log_startup, log_shutdown, log_execution_time, log_api_request, log_health_check, LogAnalyzer  # noqa: F401
+    )
+except Exception:
+    # Minimal stdlib logger and safe no-op fallbacks so the app can boot
+    import logging, functools, time as _time
+    logger = logging.getLogger("dhkalign")
+    if not logger.handlers:
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    def log_startup(msg: str) -> None: logger.info(msg)
+    def log_shutdown(msg: str) -> None: logger.info(msg)
+    def log_health_check(status: str, **kw) -> None: logger.info("health_check", extra={"status": status, **kw})
+    def log_execution_time(_logger, op_name: str):
+        def _decor(fn):
+            @functools.wraps(fn)
+            def _wrap(*a, **kw):
+                _t = _time.time()
+                try:
+                    return fn(*a, **kw)
+                finally:
+                    dur = (_time.time() - _t) * 1000.0
+                    _logger.info(f"{op_name} duration_ms={dur:.2f}")
+            return _wrap
+        return _decor
+    def log_api_request(_logger):
+        def _decor(fn):
+            @functools.wraps(fn)
+            async def _wrap(*a, **kw):
+                return await fn(*a, **kw)
+            return _wrap
+        return _decor
+    class LogAnalyzer:  # minimal shape used by /stats and /logs/analytics
+        def get_translation_stats(self, hours: int = 24):
+            return {
+                "total_requests": 0,
+                "successful_translations": 0,
+                "avg_processing_time_ms": 0,
+                "methods_used": {},
+            }
+        def get_error_summary(self, hours: int = 24):
+            return {"errors": 0, "by_type": {}}
 
 # Import the enhanced translator
 from backend.translator import set_db_lookup_function, router as translator_router
