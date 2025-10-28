@@ -12,6 +12,8 @@ except Exception:
 import uvicorn
 import os
 import time
+import sys
+import importlib.util
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, Literal
@@ -24,11 +26,30 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
+# Ensure enhanced logger module is registered under legacy import paths
+_LOGGER_MODULE_NAME = "backend.utils.logger"
+_logger_path = Path(__file__).resolve().parent / "utils" / "logger.py"
+if _LOGGER_MODULE_NAME not in sys.modules and _logger_path.exists():
+    _spec = importlib.util.spec_from_file_location(_LOGGER_MODULE_NAME, _logger_path)
+    if _spec and _spec.loader:
+        _logger_module = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_logger_module)
+        if not hasattr(_logger_module, "handle"):
+            import logging as _logging
+            def _default_handle(exc: BaseException, msg: Optional[str] = None, *, level: int = _logging.ERROR, lg=None) -> None:
+                log = lg or _logger_module.get_logger()
+                if level >= _logging.ERROR:
+                    log.exception(msg or str(exc))
+                else:
+                    log.log(level, msg or str(exc))
+            _logger_module.handle = _default_handle  # type: ignore[attr-defined]
+        sys.modules[_LOGGER_MODULE_NAME] = _logger_module
+
 # Import enhanced logging system (guarded: provide no-op fallbacks if symbols are absent)
 try:
-    from utils.logger import logger  # core logger
+    from backend.utils.logger import logger  # core logger
     # Optional helpers; not guaranteed to exist
-    from utils.logger import (  # type: ignore
+    from backend.utils.logger import (  # type: ignore
         log_startup, log_shutdown, log_execution_time, log_api_request, log_health_check, LogAnalyzer  # noqa: F401
     )
 except Exception:
